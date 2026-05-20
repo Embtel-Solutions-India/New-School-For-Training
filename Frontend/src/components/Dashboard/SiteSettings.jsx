@@ -85,7 +85,7 @@ const SiteSettings = () => {
 
       {/* General Settings */}
       <Section title="General Settings" icon={Globe} color="rgba(34,197,94,0.2)">
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-5 sm:grid-cols-2">
           <TextField label="Site Name" value={general?.siteName || ""} onChange={(e) => set("general.siteName", e.target.value)}
             size="small" InputProps={{ sx: { color: "white" } }} InputLabelProps={{ sx: { color: "rgba(255,255,255,0.6)" } }} />
           <TextField label="Tagline" value={general?.tagline || ""} onChange={(e) => set("general.tagline", e.target.value)}
@@ -107,7 +107,7 @@ const SiteSettings = () => {
 
       {/* Payment Settings */}
       <Section title="Payment & Revenue" icon={CreditCard} color="rgba(249,115,22,0.2)">
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-5 sm:grid-cols-2">
           <TextField label="Currency" value={payment?.currency || "USD"} onChange={(e) => set("payment.currency", e.target.value)}
             size="small" InputProps={{ sx: { color: "white" } }} InputLabelProps={{ sx: { color: "rgba(255,255,255,0.6)" } }} />
           <TextField label="Tax Percent (%)" type="number" value={payment?.taxPercent ?? 18} onChange={(e) => set("payment.taxPercent", parseFloat(e.target.value))}
@@ -150,7 +150,7 @@ const SiteSettings = () => {
 
       {/* Security Settings */}
       <Section title="Security & Access" icon={Lock} color="rgba(56,189,248,0.2)">
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-5 sm:grid-cols-2">
           <TextField label="Session Timeout (minutes)" type="number" value={security?.sessionTimeout ?? 60} onChange={(e) => set("security.sessionTimeout", parseInt(e.target.value))}
             size="small" inputProps={{ min: 5 }} InputProps={{ sx: { color: "white" } }} InputLabelProps={{ sx: { color: "rgba(255,255,255,0.6)" } }} />
           <TextField label="Max Login Attempts" type="number" value={security?.maxLoginAttempts ?? 5} onChange={(e) => set("security.maxLoginAttempts", parseInt(e.target.value))}

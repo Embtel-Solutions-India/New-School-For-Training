@@ -17,7 +17,7 @@ const ResourceCard = ({ item, i }) => {
   const fc = FILE_CONFIG[item.type] || FILE_CONFIG.download;
   const Icon = fc.icon;
   return (
-    <motion.div key={item.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}
+    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}
       className={`rounded-[20px] ${glass} p-4 flex items-center gap-4`}>
       <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl" style={{ background: fc.bg }}>
         <Icon size={18} style={{ color: fc.color }} />
@@ -120,13 +120,13 @@ const DownloadCenter = () => {
           {tab === "all" && certificates.length > 0 && (
             <p className="text-sm font-semibold text-yellow-300 mb-1">Certificates</p>
           )}
-          {tab === "all" && certificates.map((item, i) => <ResourceCard key={item.id} item={item} i={i} />)}
+          {tab === "all" && certificates.map((item, i) => <ResourceCard key={item._id || item.certificateId || i} item={item} i={i} />)}
 
           {tab === "all" && resources.length > 0 && (
             <p className="text-sm font-semibold text-sky-300 mt-4 mb-1">Course Resources</p>
           )}
-          {tab !== "certificates" && resources.map((item, i) => <ResourceCard key={item.id} item={item} i={i} />)}
-          {tab === "certificates" && certificates.map((item, i) => <ResourceCard key={item.id} item={item} i={i} />)}
+          {tab !== "certificates" && resources.map((item, i) => <ResourceCard key={item._id || item.id || i} item={item} i={i} />)}
+          {tab === "certificates" && certificates.map((item, i) => <ResourceCard key={item._id || item.certificateId || i} item={item} i={i} />)}
         </div>
       )}
     </div>

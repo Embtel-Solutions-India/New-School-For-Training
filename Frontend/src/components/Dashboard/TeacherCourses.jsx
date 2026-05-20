@@ -465,7 +465,7 @@ const TeacherCourses = () => {
               {/* Capstone */}
               <div>
                 <p className="text-sm font-semibold text-white/70 mb-3">Capstone Project</p>
-                <div className="space-y-3 rounded-xl border border-white/10 bg-white/3 p-4">
+                <div className="space-y-4 rounded-xl border border-white/10 bg-white/3 p-4">
                   <TextField fullWidth label="Capstone Title" value={form.capstone?.title || ""}
                     onChange={(e) => f("capstone", { ...form.capstone, title: e.target.value })}
                     size="small" sx={inputSx} slotProps={slotSx} />
@@ -518,8 +518,8 @@ const WeekEditor = ({ week, index, onUpdate, onRemove, inputSx, slotSx }) => {
         </div>
       </div>
       {open && (
-        <div className="px-4 pb-4 space-y-3 border-t border-white/6 pt-3">
-          <div className="grid grid-cols-2 gap-3">
+        <div className="px-4 pb-4 space-y-4 border-t border-white/6 pt-3">
+          <div className="grid grid-cols-2 gap-4">
             <TextField fullWidth label="Week Title" value={week.title}
               onChange={(e) => onUpdate(index, "title", e.target.value)} size="small" sx={inputSx} slotProps={slotSx} />
             <TextField fullWidth label='Duration (e.g. "3 hours")' value={week.duration}

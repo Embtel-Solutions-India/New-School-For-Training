@@ -114,7 +114,7 @@ const EditTeacherModal = ({ open, onClose, teacher, onSuccess }) => {
         </Tabs>
       </Box>
 
-      <DialogContent className="!space-y-4 !pt-4">
+      <DialogContent className="!space-y-5 !pt-5">
         {apiError && <Alert severity="error" className="!bg-red-500/20 !border-red-500/50">{apiError}</Alert>}
 
         {activeTab === 0 && (

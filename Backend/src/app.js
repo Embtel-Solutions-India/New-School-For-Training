@@ -15,13 +15,12 @@ import blogRoutes from "./routes/blogRoutes.js";
 import uploadRoutes from "./routes/uploadRoutes.js";
 import checkoutRoutes from "./routes/checkoutRoutes.js";
 import lessonRoutes from "./routes/lessonRoutes.js";
-import configurePassport from "./config/passport.js";
+import certificateRoutes from "./routes/certificateRoutes.js";
+import aiRoutes from "./routes/aiRoutes.js";
 import { authLimiter } from "./middleware/rateLimiter.js";
 import { errorHandler, notFound } from "./middleware/errorMiddleware.js";
 
 const app = express();
-
-configurePassport();
 
 const allowedOrigins = [
   process.env.CLIENT_URL,
@@ -70,6 +69,8 @@ app.use("/api/blogs", blogRoutes);
 app.use("/api/upload", uploadRoutes);
 app.use("/api/checkout", checkoutRoutes);
 app.use("/api/lesson", lessonRoutes);
+app.use("/api/certificate", certificateRoutes);
+app.use("/api/ai", aiRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

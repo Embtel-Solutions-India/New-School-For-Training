@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { Chip, Skeleton } from "@mui/material";
 import { Calendar, CheckCircle2, Clock, ExternalLink, User, Video } from "lucide-react";
 import toast from "react-hot-toast";
 import studentApi from "../../services/studentApi";
+import { getSocket } from "../../services/socketClient";
 
 const glass = "border border-white/10 bg-white/[0.07] shadow-[0_24px_90px_rgba(0,0,0,0.32)] backdrop-blur-2xl";
 
@@ -85,11 +86,20 @@ const ClassCard = ({ cls, i }) => {
   );
 };
 
+const POLL_INTERVAL_MS = 30_000;
+
 const UpcomingLiveClasses = () => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [history, setHistory] = useState([]);
   const [historyLoading, setHistoryLoading] = useState(true);
+  const pollRef = useRef(null);
+
+  const refreshClasses = () => {
+    studentApi.getUpcomingLiveClasses()
+      .then(({ data: res }) => setData(res))
+      .catch(() => {});
+  };
 
   useEffect(() => {
     studentApi.getUpcomingLiveClasses()
@@ -101,6 +111,21 @@ const UpcomingLiveClasses = () => {
       .then(({ data: res }) => setHistory(res.records || []))
       .catch(() => {})
       .finally(() => setHistoryLoading(false));
+
+    // 30s polling for status changes
+    pollRef.current = setInterval(refreshClasses, POLL_INTERVAL_MS);
+
+    // Instant refresh when a teacher starts a live class
+    const socket = getSocket();
+    if (socket) {
+      socket.on("live-class-started", refreshClasses);
+    }
+
+    return () => {
+      clearInterval(pollRef.current);
+      const s = getSocket();
+      if (s) s.off("live-class-started", refreshClasses);
+    };
   }, []);
 
   return (

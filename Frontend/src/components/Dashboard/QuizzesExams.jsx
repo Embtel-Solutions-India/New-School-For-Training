@@ -27,10 +27,10 @@ const QuizQuestion = ({ q, idx, onChange, onRemove }) => {
     <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
       <div className="flex items-start gap-2">
         <span className="mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white/10 text-xs font-bold">{idx + 1}</span>
-        <div className="flex-1 space-y-3">
+        <div className="flex-1 space-y-4">
           <TextField fullWidth label="Question *" value={q.prompt} onChange={(e) => update("prompt", e.target.value)}
             size="small" InputProps={{ sx: { color: "white" } }} InputLabelProps={{ sx: { color: "rgba(255,255,255,0.6)" } }} />
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-4">
             <FormControl fullWidth size="small">
               <InputLabel sx={{ color: "rgba(255,255,255,0.6)" }}>Type</InputLabel>
               <Select value={q.type} onChange={(e) => update("type", e.target.value)} label="Type" sx={{ color: "white" }}>
@@ -233,11 +233,11 @@ const QuizzesExams = () => {
       <Dialog open={dialog} onClose={() => setDialog(false)} maxWidth="md" fullWidth
         slotProps={{ paper: { sx: { bgcolor: "#0b1220", color: "white", borderRadius: 5, border: "1px solid rgba(255,255,255,0.1)" } } }}>
         <DialogTitle sx={{ fontWeight: 700 }}>{editingQuiz ? "Edit Quiz" : "Create Quiz"}</DialogTitle>
-        <DialogContent>
-          <div className="mt-2 space-y-4">
+        <DialogContent sx={{ px: 3, pt: 3 }}>
+          <div className="space-y-5">
             <TextField fullWidth label="Quiz Title *" value={form.title} onChange={(e) => setForm((p) => ({ ...p, title: e.target.value }))}
               size="small" InputProps={{ sx: { color: "white" } }} InputLabelProps={{ sx: { color: "rgba(255,255,255,0.6)" } }} />
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-5">
               <TextField fullWidth label="Time Limit (min, 0 = no limit)" type="number" value={form.timeLimit}
                 onChange={(e) => setForm((p) => ({ ...p, timeLimit: parseInt(e.target.value) || 0 }))}
                 size="small" inputProps={{ min: 0 }} InputProps={{ sx: { color: "white" } }} InputLabelProps={{ sx: { color: "rgba(255,255,255,0.6)" } }} />

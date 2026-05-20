@@ -65,6 +65,7 @@ export const roleMenus = {
     { label: "Bookmarks", icon: Bookmark, section: "s-bookmarks" },
     { label: "Downloads", icon: Download, section: "s-downloads" },
     { label: "Profile Settings", icon: UserCog, section: "s-profile" },
+    { label: "AI Learning Assistant", icon: Bot, section: "s-ai-assistant" },
   ],
   teacher: [
     { label: "Dashboard Overview", icon: Gauge, section: "t-overview" },
@@ -99,8 +100,5 @@ export const roleMenus = {
 };
 
 export const quickActions = [
-  { label: "Search everywhere", icon: Search },
   { label: "AI assistant", icon: Bot },
-  { label: "New class", icon: CalendarClock },
-  { label: "Broadcast", icon: Bell },
 ];

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Skeleton, TextField } from "@mui/material";
-import { Award, CheckCircle2, ExternalLink, Search, Shield } from "lucide-react";
+import { Award, CheckCircle2, Download, ExternalLink, Search, Shield } from "lucide-react";
 import toast from "react-hot-toast";
 import studentApi from "../../services/studentApi";
 
@@ -13,6 +13,24 @@ const StudentCertificates = () => {
   const [verifyId, setVerifyId] = useState("");
   const [verifyResult, setVerifyResult] = useState(null);
   const [verifying, setVerifying] = useState(false);
+  const [downloading, setDownloading] = useState(null);
+
+  const handleDownload = async (cert) => {
+    try {
+      setDownloading(cert._id);
+      const { data } = await studentApi.downloadCertificate(cert.certificateId);
+      const url = URL.createObjectURL(new Blob([data], { type: "application/pdf" }));
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `certificate-${cert.certificateId}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      toast.error("Failed to download certificate");
+    } finally {
+      setDownloading(null);
+    }
+  };
 
   useEffect(() => {
     studentApi.getMyCertificates()
@@ -111,6 +129,14 @@ const StudentCertificates = () => {
                   <CheckCircle2 size={13} className="text-emerald-400" />
                   <span className="text-xs text-emerald-300">Verified</span>
                 </div>
+                <button
+                  onClick={() => handleDownload(cert)}
+                  disabled={downloading === cert._id}
+                  className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-xl bg-amber-500/15 py-2 text-xs font-semibold text-amber-300 hover:bg-amber-500/25 transition disabled:opacity-50"
+                >
+                  <Download size={13} />
+                  {downloading === cert._id ? "Downloading…" : "Download PDF"}
+                </button>
               </div>
             </motion.div>
           ))}

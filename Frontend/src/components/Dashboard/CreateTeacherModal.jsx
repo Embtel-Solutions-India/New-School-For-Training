@@ -67,7 +67,7 @@ const CreateTeacherModal = ({ open, onClose, onSuccess }) => {
     <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth slotProps={{ paper: { className: "!bg-[#0b1220] !text-white !rounded-3xl" } }}>
       <DialogTitle className="!text-white !font-bold">Create New Teacher</DialogTitle>
 
-      <DialogContent className="!space-y-4 !pt-4">
+      <DialogContent className="!space-y-5 !pt-5">
         {apiError && <Alert severity="error" className="!bg-red-500/20 !border-red-500/50">{apiError}</Alert>}
 
         <TextField

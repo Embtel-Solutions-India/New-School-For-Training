@@ -3,6 +3,7 @@ import Attendance from "../models/Attendance.js";
 import MeetingRecording from "../models/MeetingRecording.js";
 import Enrollment from "../models/Enrollment.js";
 import Notification from "../models/Notification.js";
+import User from "../models/User.js";
 import ApiError from "../utils/ApiError.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import {
@@ -10,6 +11,8 @@ import {
   updateMeetEvent,
   cancelMeetEvent,
 } from "../services/googleMeetService.js";
+import { emitToUsers } from "../services/socketService.js";
+import { sendLiveClassEmail, buildClientUrl } from "../services/emailService.js";
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -121,6 +124,23 @@ export const createLiveClass = asyncHandler(async (req, res) => {
       message: `"${cls.title}" has been scheduled on ${startTime.toLocaleString()}. ${resolvedMeetingLink ? "Click to join when it starts." : "Meeting link will be shared soon."}`,
       type: "info",
     });
+
+    // Real-time socket notify — fire and forget, never blocks response
+    Enrollment.find({ course: courseId, status: "active" })
+      .select("user").lean()
+      .then((enrollments) => {
+        const ids = enrollments.map((e) => e.user);
+        if (ids.length) {
+          emitToUsers(ids, "live-class-scheduled", {
+            liveClassId: cls._id,
+            title: cls.title,
+            courseId,
+            scheduledAt: cls.scheduledAt,
+            meetingLink: cls.meetingLink || null,
+          });
+        }
+      })
+      .catch(() => {});
   }
 
   res.status(201).json({ success: true, liveClass: cls });
@@ -195,18 +215,67 @@ export const deleteLiveClass = asyncHandler(async (req, res) => {
 
 export const startLiveClass = asyncHandler(async (req, res) => {
   const cls = await ownedClass(req);
+  if (cls.status === "live") throw new ApiError(400, "Class is already live");
+  if (cls.status === "ended") throw new ApiError(400, "Cannot restart an ended class");
+  if (cls.status === "cancelled") throw new ApiError(400, "Cannot start a cancelled class");
+
   cls.status = "live";
   cls.startedAt = new Date();
   await cls.save();
 
   if (cls.course) {
-    await notifyEnrolledStudents({
-      courseId: cls.course,
-      sentBy: req.user._id,
-      title: "Live Class Started",
-      message: `"${cls.title}" is now live! Join now${cls.meetingLink ? `: ${cls.meetingLink}` : "."}`,
-      type: "success",
-    });
+    // Build enrolled student list once for all notification types
+    const enrollments = await Enrollment.find({ course: cls.course, status: "active" })
+      .select("user")
+      .lean();
+    const studentIds = enrollments.map((e) => e.user);
+
+    // 1. DB notification (existing helper, but we already have studentIds — inline for efficiency)
+    if (studentIds.length > 0) {
+      await Notification.create({
+        title: "Live Class Started",
+        message: `"${cls.title}" is now live! Join now${cls.meetingLink ? "" : "."}`,
+        type: "success",
+        targetAudience: "specific",
+        targetUsers: studentIds,
+        sentBy: req.user._id,
+        isActive: true,
+      }).catch((err) => console.error("[liveClass] DB notification failed:", err.message));
+
+      // 2. Real-time socket emit — fire-and-forget, never blocks response
+      const payload = {
+        liveClassId: cls._id,
+        title: cls.title,
+        meetingLink: cls.meetingLink || null,
+        courseId: cls.course,
+        startedAt: cls.startedAt,
+      };
+      emitToUsers(studentIds, "live-class-started", payload);
+
+      // 3. Email notifications — fire-and-forget
+      (async () => {
+        try {
+          const students = await User.find({ _id: { $in: studentIds } }).select("name email").lean();
+          const populated = await LiveClass.findById(cls._id).populate("course", "title").lean();
+          const courseTitle = populated?.course?.title || "";
+          const dashboardUrl = buildClientUrl("/dashboard");
+          await Promise.allSettled(
+            students.map((s) =>
+              sendLiveClassEmail({
+                to: s.email,
+                studentName: s.name,
+                classTitle: cls.title,
+                courseTitle,
+                meetingLink: cls.meetingLink || "",
+                dashboardUrl,
+              })
+            )
+          );
+        } catch (err) {
+          console.error("[liveClass] Email notifications failed:", err.message);
+        }
+      })();
+    }
   }
 
   res.json({ success: true, liveClass: cls });

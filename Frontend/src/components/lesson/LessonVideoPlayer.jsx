@@ -234,7 +234,7 @@ const LessonVideoPlayer = ({ lesson, courseId, onComplete }) => {
     >
       <video
         ref={videoRef}
-        src={videoSrc}
+        src={videoSrc || undefined}
         className="h-full w-full object-contain"
         preload="metadata"
         playsInline

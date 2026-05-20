@@ -8,6 +8,7 @@ import Footer from "../components/Common/Footer";
 import useAuthStore from "../store/authStore";
 import paymentApi from "../services/paymentApi";
 import studentApi from "../services/studentApi";
+import { courseApi } from "../services/courseApi";
 
 const formatPrice = (amount) =>
   new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(amount);
@@ -42,11 +43,11 @@ const CheckoutPage = () => {
     const load = async () => {
       try {
         const [courseRes, configRes] = await Promise.all([
-          fetch(`/api/courses/public/${courseId}`).then((r) => r.json()),
+          courseApi.getPublicCourseById(courseId),
           paymentApi.getCheckoutConfig(),
         ]);
-        if (!courseRes.success) throw new Error("Course not found");
-        setCourse(courseRes.course);
+        if (!courseRes.data?.success) throw new Error("Course not found");
+        setCourse(courseRes.data.course);
         setConfig(configRes.data);
       } catch {
         toast.error("Failed to load checkout");

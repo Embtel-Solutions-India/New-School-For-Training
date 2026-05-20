@@ -19,6 +19,8 @@ const getLessonProgress = (courseId, lessonId) => api.get(`${S}/courses/${course
 // ── Certificates
 const getMyCertificates = () => api.get(`${S}/certificates`);
 const verifyCertificate = (certId) => api.get(`${S}/certificates/verify/${certId}`);
+const downloadCertificate = (certId) =>
+  api.get(`/certificate/download/${certId}`, { responseType: "blob" });
 
 // ── Learning Progress
 const getLearningProgress = () => api.get(`${S}/progress`);
@@ -73,7 +75,7 @@ const studentApi = {
   getAllCourses, getCourseCategories, getEnrolledCourses, enrollCourse,
   getCourseLessons, markLessonComplete, saveLessonProgress, getLessonProgress,
   getVideoSignedUrl,
-  getMyCertificates, verifyCertificate,
+  getMyCertificates, verifyCertificate, downloadCertificate,
   getLearningProgress,
   getUpcomingLiveClasses, joinLiveClass, leaveLiveClass, getAttendanceHistory,
   getMyAssignments, submitAssignment,

@@ -1,15 +1,56 @@
 import dotenv from "dotenv";
 dotenv.config();
 
+import { createServer } from "http";
+import { Server as SocketServer } from "socket.io";
 import app from "./app.js";
 import connectDB from "./config/db.js";
+import configurePassport from "./config/passport.js";
+import { setIo } from "./services/socketService.js";
+
+// Must run after dotenv.config() — ESM hoisting means module-level calls in app.js
+// would execute before .env is loaded, so passport is configured here instead.
+configurePassport();
+
+console.log({
+  clientLoaded: !!process.env.GOOGLE_CLIENT_ID,
+  secretLoaded: !!process.env.GOOGLE_CLIENT_SECRET,
+  redirect: process.env.GOOGLE_REDIRECT_URI,
+});
 
 const port = process.env.PORT || 5000;
+
+const allowedOrigins = [
+  process.env.CLIENT_URL,
+  "http://localhost:5173",
+  "http://127.0.0.1:5173",
+].filter(Boolean);
 
 const startServer = async () => {
   await connectDB();
 
-  app.listen(port, () => {
+  const httpServer = createServer(app);
+
+  const io = new SocketServer(httpServer, {
+    cors: {
+      origin: allowedOrigins,
+      credentials: true,
+    },
+  });
+
+  setIo(io);
+
+  io.on("connection", (socket) => {
+    socket.on("join-user-room", (userId) => {
+      if (userId) socket.join(`user:${userId}`);
+    });
+
+    socket.on("leave-user-room", (userId) => {
+      if (userId) socket.leave(`user:${userId}`);
+    });
+  });
+
+  httpServer.listen(port, () => {
     console.log(`✓ Auth server running`);
     console.log(`✓ Server listening on port ${port}  [${process.env.NODE_ENV || "development"}]`);
 

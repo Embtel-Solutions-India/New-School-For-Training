@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   Avatar,
   Badge,
@@ -12,23 +12,34 @@ import {
 import { AnimatePresence, motion } from "framer-motion";
 import {
   Bell,
+  Bot,
+  CalendarClock,
+  CheckCheck,
   ChevronDown,
   ChevronRight,
   Command,
+  Info,
   LogOut,
+  Megaphone,
   Menu as MenuIcon,
   Moon,
   PanelLeftClose,
   PanelLeftOpen,
+  Radio,
   Search,
   Settings,
   Sun,
   X,
+  Zap,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { quickActions, roleMenus, roles } from "../../data/dashboardConfig";
+import { roleMenus, roles } from "../../data/dashboardConfig";
 import useAuthStore from "../../store/authStore";
 import { formatRole, normalizeRole } from "../../utils/roles";
+import studentApi from "../../services/studentApi";
+import useSocket from "../../hooks/useSocket";
+import { getSocket } from "../../services/socketClient";
+import LiveClassPopup from "./LiveClassPopup";
 
 // Admin section components
 import AdminOverview from "./AdminOverview";
@@ -75,6 +86,7 @@ import StudentNotifications from "./StudentNotifications";
 import Bookmarks from "./Bookmarks";
 import DownloadCenter from "./DownloadCenter";
 import ProfileSettings from "./ProfileSettings";
+import StudentAIAssistant from "./StudentAIAssistant";
 
 const sectionTitles = {
   "s-overview": "Dashboard Overview",
@@ -91,6 +103,7 @@ const sectionTitles = {
   "s-bookmarks": "Bookmarks",
   "s-downloads": "Download Center",
   "s-profile": "Profile Settings",
+  "s-ai-assistant": "AI Learning Assistant",
   "t-overview": "Dashboard Overview",
   "t-courses": "Add Courses",
   "t-lessons": "Lessons & Modules",
@@ -120,6 +133,33 @@ const sectionTitles = {
 };
 
 const glass = "border border-white/10 bg-white/[0.07] shadow-[0_24px_90px_rgba(0,0,0,0.32)] backdrop-blur-2xl";
+
+const NOTIF_TYPES = {
+  success:      { icon: CheckCheck, color: "#22c55e", bg: "rgba(34,197,94,0.15)" },
+  info:         { icon: Info,       color: "#a78bfa", bg: "rgba(167,139,250,0.15)" },
+  alert:        { icon: Megaphone,  color: "#f97316", bg: "rgba(249,115,22,0.15)" },
+  announcement: { icon: Megaphone,  color: "#38bdf8", bg: "rgba(56,189,248,0.15)" },
+  warning:      { icon: Zap,        color: "#fbbf24", bg: "rgba(251,191,36,0.15)" },
+};
+
+const timeAgo = (date) => {
+  const m = Math.floor((Date.now() - new Date(date).getTime()) / 60000);
+  if (m < 1) return "just now";
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  return `${Math.floor(h / 24)}d ago`;
+};
+
+const timeUntil = (date) => {
+  const diff = new Date(date).getTime() - Date.now();
+  if (diff <= 0) return "now";
+  const m = Math.floor(diff / 60000);
+  if (m < 60) return `in ${m}m`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `in ${h}h`;
+  return `in ${Math.floor(h / 24)}d`;
+};
 
 const AdminSectionRouter = ({ section }) => {
   const map = {
@@ -155,6 +195,7 @@ const StudentSectionRouter = ({ section }) => {
     "s-bookmarks": <Bookmarks />,
     "s-downloads": <DownloadCenter />,
     "s-profile": <ProfileSettings />,
+    "s-ai-assistant": <StudentAIAssistant />,
   };
   return map[section] || <StudentOverview />;
 };
@@ -194,6 +235,100 @@ const DashboardShell = () => {
   const [notificationsAnchor, setNotificationsAnchor] = useState(null);
   const [commandOpen, setCommandOpen] = useState(false);
   const [dark, setDark] = useState(true);
+  const [livePopups, setLivePopups] = useState([]);
+  const [navNotifs, setNavNotifs] = useState([]);
+  const [navUnread, setNavUnread] = useState(0);
+  const [navClasses, setNavClasses] = useState({ upcoming: [], past: [] });
+  const [newClassCount, setNewClassCount] = useState(0);
+  const [classDropAnchor, setClassDropAnchor] = useState(null);
+
+  // Connect socket — joins user room so real-time events are received
+  useSocket();
+
+  const dismissPopup = useCallback((liveClassId) => {
+    setLivePopups((prev) => prev.filter((n) => n.liveClassId !== liveClassId));
+  }, []);
+
+  // Fetch initial navbar data on mount (student only)
+  useEffect(() => {
+    if (role !== "student") return;
+    studentApi.getNotifications({ page: 1, limit: 8 })
+      .then(({ data }) => { setNavNotifs(data.notifications || []); setNavUnread(data.unreadCount || 0); })
+      .catch(() => {});
+    studentApi.getUpcomingLiveClasses()
+      .then(({ data }) => setNavClasses(data || { upcoming: [], past: [] }))
+      .catch(() => {});
+  }, [role]);
+
+  // Listen for live class socket events (students only)
+  useEffect(() => {
+    if (role !== "student") return;
+
+    if ("Notification" in window && Notification.permission === "default") {
+      Notification.requestPermission().catch(() => {});
+    }
+
+    const socket = getSocket();
+    if (!socket) return;
+
+    const refreshNavNotifs = () => {
+      studentApi.getNotifications({ page: 1, limit: 8 })
+        .then(({ data }) => { setNavNotifs(data.notifications || []); setNavUnread(data.unreadCount || 0); })
+        .catch(() => {});
+    };
+
+    const refreshNavClasses = () => {
+      studentApi.getUpcomingLiveClasses()
+        .then(({ data }) => setNavClasses(data || { upcoming: [], past: [] }))
+        .catch(() => {});
+    };
+
+    const startedHandler = (data) => {
+      setLivePopups((prev) => {
+        if (prev.some((n) => n.liveClassId === data.liveClassId)) return prev;
+        return [...prev, data];
+      });
+      if ("Notification" in window && Notification.permission === "granted") {
+        new Notification(`Live Class: ${data.title}`, {
+          body: "Your class just started. Click to join.",
+          icon: "/images/sft_logo.png",
+        });
+      }
+      refreshNavNotifs();
+      refreshNavClasses();
+    };
+
+    const scheduledHandler = () => {
+      setNewClassCount((c) => c + 1);
+      refreshNavClasses();
+      refreshNavNotifs();
+    };
+
+    socket.on("live-class-started", startedHandler);
+    socket.on("live-class-scheduled", scheduledHandler);
+    return () => {
+      socket.off("live-class-started", startedHandler);
+      socket.off("live-class-scheduled", scheduledHandler);
+    };
+  }, [role]);
+
+  const handleNavMarkRead = async (id) => {
+    await studentApi.markNotificationRead(id).catch(() => {});
+    setNavNotifs((prev) => prev.map((n) => n._id === id ? { ...n, isRead: true } : n));
+    setNavUnread((c) => Math.max(0, c - 1));
+  };
+
+  const handleNavMarkAll = async () => {
+    await studentApi.markAllNotificationsRead().catch(() => {});
+    setNavNotifs((prev) => prev.map((n) => ({ ...n, isRead: true })));
+    setNavUnread(0);
+  };
+
+  const handleClassDropOpen = (e) => {
+    if (role === "teacher") { setActiveSection("t-live"); return; }
+    setNewClassCount(0);
+    setClassDropAnchor(e.currentTarget);
+  };
 
   const onLogout = async () => {
     await logout();
@@ -231,6 +366,11 @@ const DashboardShell = () => {
             profileAnchor={profileAnchor} notificationsAnchor={notificationsAnchor}
             setProfileAnchor={setProfileAnchor} setNotificationsAnchor={setNotificationsAnchor}
             onLogout={onLogout}
+            navNotifs={navNotifs} navUnread={navUnread}
+            navClasses={navClasses} newClassCount={newClassCount}
+            classDropAnchor={classDropAnchor} setClassDropAnchor={setClassDropAnchor}
+            onMarkRead={handleNavMarkRead} onMarkAll={handleNavMarkAll}
+            onClassDrop={handleClassDropOpen} onNavigate={setActiveSection}
           />
 
           <AnimatePresence mode="wait">
@@ -253,8 +393,11 @@ const DashboardShell = () => {
           </AnimatePresence>
         </main>
 
-        <QuickActions />
+        <QuickActions role={role} onSelect={setActiveSection} />
         <CommandPalette open={commandOpen} onClose={() => setCommandOpen(false)} role={role} onSelect={setActiveSection} />
+        {role === "student" && livePopups.length > 0 && (
+          <LiveClassPopup notifications={livePopups} onDismiss={dismissPopup} />
+        )}
       </div>
     </div>
   );
@@ -288,7 +431,7 @@ const SidebarContent = ({ role, activeSection, expanded, collapsed, mobile, onSe
           {!collapsed && <p className="mt-1 font-semibold">{config.title}</p>}
         </div>
       </div>
-      <nav className="flex-1 space-y-1 overflow-y-auto pr-1 no-scrollbar">
+      <nav className="relative flex-1 space-y-1 overflow-y-auto pr-1 no-scrollbar">
         {(roleMenus[role] || roleMenus.student).map((item) => (
           <SidebarItem key={item.label} item={item} activeSection={activeSection} expanded={expanded}
             collapsed={collapsed && !mobile} onSelect={onSelect} onExpand={onExpand} />
@@ -352,63 +495,225 @@ const SidebarItem = ({ item, activeSection, expanded, collapsed, onSelect, onExp
   );
 };
 
-const Topbar = ({ user, role, config, section, dark, onMobileOpen, onThemeToggle, onCommand, profileAnchor, notificationsAnchor, setProfileAnchor, setNotificationsAnchor, onLogout }) => (
-  <header className="fixed left-0 right-0 top-0 z-20 border-b border-white/10 bg-[#070b14]/72 backdrop-blur-2xl lg:left-auto">
-    <div className="flex h-20 items-center gap-3 px-4 sm:px-6 lg:px-8">
-      <IconButton onClick={onMobileOpen} className="!text-white lg:!hidden"><MenuIcon /></IconButton>
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2 text-xs text-white/45">
-          <span>{config.label}</span><ChevronRight size={13} /><span>{sectionTitles[section] || "Workspace"}</span>
-        </div>
-        <p className="truncate text-base font-semibold sm:text-lg">{sectionTitles[section] || config.title}</p>
-      </div>
-      <button onClick={onCommand} className="hidden min-w-[280px] items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-3 text-left text-sm text-white/45 transition hover:bg-white/[0.1] md:flex">
-        <Search size={17} />Search courses, users, reports...
-        <span className="ml-auto rounded-lg border border-white/10 px-2 py-0.5 text-xs">Ctrl K</span>
-      </button>
-      <Tooltip title={dark ? "Light theme" : "Dark theme"}>
-        <IconButton onClick={onThemeToggle} className="!text-white/70">{dark ? <Sun size={19} /> : <Moon size={19} />}</IconButton>
-      </Tooltip>
-      <IconButton onClick={(e) => setNotificationsAnchor(e.currentTarget)} className="!text-white/70">
-        <Badge color="warning" variant="dot"><Bell size={19} /></Badge>
-      </IconButton>
-      <button onClick={(e) => setProfileAnchor(e.currentTarget)} className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.06] p-1.5 pr-2 text-white">
-        <Avatar src={user?.avatar} alt={user?.name} sx={{ width: 34, height: 34 }}>{user?.name?.[0] || "S"}</Avatar>
-        <ChevronDown size={15} />
-      </button>
-      <Menu anchorEl={notificationsAnchor} open={Boolean(notificationsAnchor)} onClose={() => setNotificationsAnchor(null)}
-        slotProps={{ paper: { className: "!mt-3 !rounded-3xl !bg-[#0b1220] !text-white !border !border-white/10 !w-80" } }}>
-        <MenuItem disabled className="!text-white/40 !text-sm !py-4 !text-center">
-          No new notifications
-        </MenuItem>
-      </Menu>
-      <Menu anchorEl={profileAnchor} open={Boolean(profileAnchor)} onClose={() => setProfileAnchor(null)}
-        slotProps={{ paper: { className: "!mt-3 !rounded-3xl !bg-[#0b1220] !text-white !border !border-white/10 !w-72" } }}>
-        <MenuItem>
-          <div><p className="font-semibold">{user?.name}</p><p className="text-xs capitalize text-white/45">{formatRole(role)}</p></div>
-        </MenuItem>
-        <Divider className="!border-white/10" />
-        <MenuItem onClick={onLogout}><LogOut size={16} className="mr-2" /> Logout</MenuItem>
-      </Menu>
-    </div>
-  </header>
-);
+const Topbar = ({
+  user, role, config, section, dark,
+  onMobileOpen, onThemeToggle, onCommand,
+  profileAnchor, notificationsAnchor, setProfileAnchor, setNotificationsAnchor,
+  onLogout,
+  navNotifs, navUnread, navClasses, newClassCount,
+  classDropAnchor, setClassDropAnchor, onMarkRead, onMarkAll, onClassDrop, onNavigate,
+}) => {
+  const liveCount = (navClasses?.upcoming || []).filter((c) => c.status === "live").length;
+  const classBadge = newClassCount + liveCount;
+  const notifSection = role === "teacher" ? "t-notifications" : role === "admin" ? "notifications" : "s-notifications";
 
-const QuickActions = () => (
-  <div className="fixed bottom-5 right-5 z-30 flex flex-col gap-2">
-    {quickActions.map((action, i) => {
-      const Icon = action.icon;
-      return (
-        <Tooltip title={action.label} placement="left" key={action.label}>
-          <motion.button initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 + i * 0.05 }}
-            className="grid h-12 w-12 place-items-center rounded-2xl border border-white/15 bg-white text-[#0b1120] shadow-2xl shadow-black/30">
-            <Icon size={18} />
-          </motion.button>
+  return (
+    <header className="fixed left-0 right-0 top-0 z-20 border-b border-white/10 bg-[#070b14]/72 backdrop-blur-2xl lg:left-auto">
+      <div className="flex h-20 items-center gap-3 px-4 sm:px-6 lg:px-8">
+        <IconButton onClick={onMobileOpen} className="!text-white lg:!hidden"><MenuIcon /></IconButton>
+
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2 text-xs text-white/45">
+            <span>{config.label}</span><ChevronRight size={13} /><span>{sectionTitles[section] || "Workspace"}</span>
+          </div>
+          <p className="truncate text-base font-semibold sm:text-lg">{sectionTitles[section] || config.title}</p>
+        </div>
+
+        <button onClick={onCommand} className="hidden min-w-[280px] items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-3 text-left text-sm text-white/45 transition hover:bg-white/[0.1] md:flex">
+          <Search size={17} />Search courses, users, reports...
+          <span className="ml-auto rounded-lg border border-white/10 px-2 py-0.5 text-xs">Ctrl K</span>
+        </button>
+
+        <Tooltip title={dark ? "Light theme" : "Dark theme"}>
+          <IconButton onClick={onThemeToggle} className="!text-white/70">{dark ? <Sun size={19} /> : <Moon size={19} />}</IconButton>
         </Tooltip>
-      );
-    })}
-  </div>
-);
+
+        {/* Notification bell — real count badge */}
+        <Tooltip title="Notifications">
+          <IconButton onClick={(e) => setNotificationsAnchor(e.currentTarget)} className="!text-white/70">
+            <Badge badgeContent={navUnread > 0 ? navUnread : null} color="error" max={9}>
+              <Bell size={19} />
+            </Badge>
+          </IconButton>
+        </Tooltip>
+
+        {/* Classes button — students and teachers */}
+        {role !== "admin" && (
+          <Tooltip title="Classes">
+            <IconButton onClick={onClassDrop} className="!text-white/70">
+              <Badge badgeContent={classBadge > 0 ? classBadge : null} color="primary" max={9}>
+                <CalendarClock size={19} />
+              </Badge>
+            </IconButton>
+          </Tooltip>
+        )}
+
+        <button onClick={(e) => setProfileAnchor(e.currentTarget)} className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.06] p-1.5 pr-2 text-white">
+          <Avatar src={user?.avatar} alt={user?.name} sx={{ width: 34, height: 34 }}>{user?.name?.[0] || "S"}</Avatar>
+          <ChevronDown size={15} />
+        </button>
+
+        {/* ── Notification dropdown ── */}
+        <Menu
+          anchorEl={notificationsAnchor}
+          open={Boolean(notificationsAnchor)}
+          onClose={() => setNotificationsAnchor(null)}
+          slotProps={{ paper: { className: "!mt-3 !rounded-3xl !bg-[#0b1220] !text-white !border !border-white/10 !w-96 !overflow-hidden", sx: { maxHeight: 520 } } }}
+        >
+          <div className="flex items-center justify-between px-4 pt-4 pb-2">
+            <p className="text-sm font-semibold">Notifications</p>
+            {navUnread > 0 && (
+              <button onClick={onMarkAll} className="text-xs text-white/40 hover:text-white/70 transition">
+                Mark all read
+              </button>
+            )}
+          </div>
+          <Divider className="!border-white/10" />
+          {navNotifs.length === 0 ? (
+            <div className="py-10 text-center text-sm text-white/30">No notifications yet</div>
+          ) : (
+            <div style={{ overflowY: "auto", maxHeight: 340 }}>
+              {navNotifs.map((n) => {
+                const tc = NOTIF_TYPES[n.type] || NOTIF_TYPES.info;
+                const NIcon = tc.icon;
+                return (
+                  <div
+                    key={n._id}
+                    onClick={() => { if (!n.isRead) onMarkRead(n._id); }}
+                    className={`flex cursor-pointer items-start gap-3 px-4 py-3 transition hover:bg-white/[0.04] ${!n.isRead ? "bg-sky-500/[0.04]" : ""}`}
+                  >
+                    <div className="mt-0.5 h-8 w-8 shrink-0 flex items-center justify-center rounded-xl" style={{ background: tc.bg }}>
+                      <NIcon size={14} style={{ color: tc.color }} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5">
+                        <p className="truncate text-xs font-semibold text-white leading-tight">{n.title}</p>
+                        {!n.isRead && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-sky-400" />}
+                      </div>
+                      <p className="mt-0.5 text-xs text-white/50 line-clamp-2 leading-snug">{n.message}</p>
+                      <p className="mt-0.5 text-[10px] text-white/25">{timeAgo(n.createdAt)}</p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          <Divider className="!border-white/10" />
+          <div
+            onClick={() => { onNavigate(notifSection); setNotificationsAnchor(null); }}
+            className="cursor-pointer select-none py-3 text-center text-xs text-white/40 transition hover:text-white/70"
+          >
+            View all notifications →
+          </div>
+        </Menu>
+
+        {/* ── Classes dropdown (students only) ── */}
+        {role === "student" && (
+          <Menu
+            anchorEl={classDropAnchor}
+            open={Boolean(classDropAnchor)}
+            onClose={() => setClassDropAnchor(null)}
+            slotProps={{ paper: { className: "!mt-3 !rounded-3xl !bg-[#0b1220] !text-white !border !border-white/10 !w-96 !overflow-hidden", sx: { maxHeight: 520 } } }}
+          >
+            <div className="px-4 pt-4 pb-2">
+              <p className="text-sm font-semibold">Your Classes</p>
+            </div>
+            <Divider className="!border-white/10" />
+
+            {/* Live now */}
+            {(navClasses?.upcoming || []).filter((c) => c.status === "live").length > 0 && (
+              <>
+                <p className="flex items-center gap-1.5 px-4 pt-3 pb-1 text-[10px] font-bold uppercase tracking-widest text-red-400">
+                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-red-400" /> Live Now
+                </p>
+                {(navClasses.upcoming || []).filter((c) => c.status === "live").map((cls) => (
+                  <div key={cls._id} className="flex items-center gap-3 px-4 py-2.5 transition hover:bg-white/[0.04]">
+                    <div className="h-8 w-8 shrink-0 flex items-center justify-center rounded-xl bg-red-500/20">
+                      <Radio size={14} className="text-red-400" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-xs font-semibold text-white">{cls.title}</p>
+                      <p className="truncate text-[11px] text-white/40">{cls.course?.title}</p>
+                    </div>
+                    {cls.meetingLink && (
+                      <a
+                        href={cls.meetingLink} target="_blank" rel="noreferrer"
+                        onClick={() => setClassDropAnchor(null)}
+                        className="shrink-0 rounded-xl bg-red-600 px-3 py-1.5 text-xs font-bold text-white transition hover:bg-red-500"
+                      >
+                        Join
+                      </a>
+                    )}
+                  </div>
+                ))}
+                <Divider className="!border-white/10 !my-1" />
+              </>
+            )}
+
+            {/* Upcoming */}
+            {(navClasses?.upcoming || []).filter((c) => c.status === "scheduled").length > 0 && (
+              <>
+                <p className="px-4 pt-2 pb-1 text-[10px] font-bold uppercase tracking-widest text-sky-400">Upcoming</p>
+                {(navClasses.upcoming || []).filter((c) => c.status === "scheduled").slice(0, 4).map((cls) => (
+                  <div key={cls._id} className="flex items-center gap-3 px-4 py-2.5 transition hover:bg-white/[0.04]">
+                    <div className="h-8 w-8 shrink-0 flex items-center justify-center rounded-xl bg-sky-500/20">
+                      <CalendarClock size={14} className="text-sky-400" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-xs font-semibold text-white">{cls.title}</p>
+                      <p className="text-[11px] text-white/40">{cls.course?.title} · {timeUntil(cls.scheduledAt)}</p>
+                    </div>
+                  </div>
+                ))}
+                <Divider className="!border-white/10 !my-1" />
+              </>
+            )}
+
+            {!(navClasses?.upcoming || []).length && (
+              <div className="py-10 text-center text-sm text-white/30">No upcoming classes</div>
+            )}
+
+            <div
+              onClick={() => { onNavigate("s-live"); setClassDropAnchor(null); }}
+              className="cursor-pointer select-none py-3 text-center text-xs text-white/40 transition hover:text-white/70"
+            >
+              View all classes →
+            </div>
+          </Menu>
+        )}
+
+        {/* ── Profile menu ── */}
+        <Menu anchorEl={profileAnchor} open={Boolean(profileAnchor)} onClose={() => setProfileAnchor(null)}
+          slotProps={{ paper: { className: "!mt-3 !rounded-3xl !bg-[#0b1220] !text-white !border !border-white/10 !w-72" } }}>
+          <MenuItem>
+            <div><p className="font-semibold">{user?.name}</p><p className="text-xs capitalize text-white/45">{formatRole(role)}</p></div>
+          </MenuItem>
+          <Divider className="!border-white/10" />
+          <MenuItem onClick={onLogout}><LogOut size={16} className="mr-2" /> Logout</MenuItem>
+        </Menu>
+      </div>
+    </header>
+  );
+};
+
+const QuickActions = ({ role, onSelect }) => {
+  if (role !== "student") return null;
+  return (
+    <div className="fixed bottom-5 right-5 z-30">
+      <Tooltip title="AI Learning Assistant" placement="left">
+        <motion.button
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.1 }}
+          onClick={() => onSelect("s-ai-assistant")}
+          className="grid h-12 w-12 place-items-center rounded-2xl border border-white/15 bg-white text-[#0b1120] shadow-2xl shadow-black/30"
+        >
+          <Bot size={18} />
+        </motion.button>
+      </Tooltip>
+    </div>
+  );
+};
 
 const CommandPalette = ({ open, onClose, role, onSelect }) => (
   <AnimatePresence>

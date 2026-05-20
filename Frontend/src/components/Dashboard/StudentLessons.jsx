@@ -1,12 +1,119 @@
-import { useCallback, useEffect, useState } from "react";
-import { motion } from "framer-motion";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { Button, CircularProgress, LinearProgress, Skeleton } from "@mui/material";
-import { BookOpen, CheckCircle2, Circle, FileText, PlayCircle, X } from "lucide-react";
+import { BookOpen, Bot, CheckCircle2, Circle, FileText, PlayCircle, Send, Sparkles, X } from "lucide-react";
 import toast from "react-hot-toast";
 import studentApi from "../../services/studentApi";
+import aiApi from "../../services/aiApi";
 import LessonVideoPlayer from "../lesson/LessonVideoPlayer";
 
 const glass = "border border-white/10 bg-white/[0.07] shadow-[0_24px_90px_rgba(0,0,0,0.32)] backdrop-blur-2xl";
+
+// ── Inline AI Chat Modal ──────────────────────────────────────────────────────
+const AI_PROMPTS = [
+  { label: "Summarize", prompt: "Summarize the key points of this lesson." },
+  { label: "Quiz me", prompt: "Generate 5 practice questions for this lesson." },
+  { label: "Explain", prompt: "Explain the main concept of this lesson with examples." },
+];
+
+const LessonAIModal = ({ lesson, courseTitle, onClose }) => {
+  const [messages, setMessages] = useState([]);
+  const [input, setInput] = useState("");
+  const [sending, setSending] = useState(false);
+  const [sessionId, setSessionId] = useState(null);
+  const endRef = useRef(null);
+
+  useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, sending]);
+
+  const send = async (text) => {
+    const msg = (text || input).trim();
+    if (!msg || sending) return;
+    setInput("");
+    setSending(true);
+    setMessages((p) => [...p, { role: "user", content: msg, timestamp: new Date() }]);
+    try {
+      const { data } = await aiApi.sendMessage({
+        message: msg,
+        sessionId,
+        courseId: lesson.courseId,
+        lessonId: lesson._id,
+      });
+      setSessionId(data.sessionId);
+      setMessages(data.messages);
+    } catch (err) {
+      toast.error(err?.response?.data?.message || "AI temporarily unavailable");
+      setMessages((p) => p.slice(0, -1));
+      setInput(msg);
+    } finally { setSending(false); }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-end p-4 sm:items-center sm:justify-center bg-black/50 backdrop-blur-sm"
+      onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <motion.div initial={{ opacity: 0, scale: 0.96, y: 16 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: 12 }}
+        className="w-full max-w-lg rounded-[24px] border border-white/10 bg-[#0b1220] flex flex-col shadow-2xl"
+        style={{ maxHeight: "80vh" }}>
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
+          <div className="flex items-center gap-3">
+            <div className="grid h-8 w-8 place-items-center rounded-xl bg-violet-500/20">
+              <Bot size={15} className="text-violet-300" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold">Ask AI</p>
+              <p className="text-xs text-white/40 truncate max-w-[220px]">{lesson.title}</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="rounded-xl p-1.5 text-white/40 hover:bg-white/10 hover:text-white transition"><X size={16} /></button>
+        </div>
+        {/* Messages */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-3 no-scrollbar">
+          {messages.length === 0 ? (
+            <div className="py-6 text-center">
+              <Sparkles size={24} className="mx-auto mb-3 text-violet-400/50" />
+              <p className="text-xs text-white/40">Quick actions for this lesson:</p>
+              <div className="mt-3 flex flex-wrap justify-center gap-2">
+                {AI_PROMPTS.map((p) => (
+                  <button key={p.label} onClick={() => send(p.prompt)}
+                    className="rounded-xl border border-white/10 bg-white/[0.05] px-3 py-1.5 text-xs text-white/60 hover:bg-white/[0.1] hover:text-white transition">
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : messages.map((m, i) => (
+            <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
+              <div className={`max-w-[85%] rounded-2xl px-3 py-2.5 text-xs ${m.role === "user" ? "rounded-br-sm bg-sky-500/20 text-sky-100" : "rounded-bl-sm border border-white/10 bg-white/[0.06] text-white/85"}`}>
+                <p className="whitespace-pre-wrap leading-relaxed">{m.content}</p>
+              </div>
+            </div>
+          ))}
+          {sending && (
+            <div className="flex justify-start">
+              <div className="rounded-2xl rounded-bl-sm border border-white/10 bg-white/[0.07] px-4 py-3">
+                <div className="flex gap-1 items-center">
+                  {[0,1,2].map((i) => <motion.span key={i} className="h-1.5 w-1.5 rounded-full bg-white/40" animate={{ y:[0,-4,0] }} transition={{ duration: 0.6, delay: i*0.15, repeat: Infinity }} />)}
+                </div>
+              </div>
+            </div>
+          )}
+          <div ref={endRef} />
+        </div>
+        {/* Input */}
+        <div className="border-t border-white/10 p-3 flex gap-2">
+          <input value={input} onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && send()}
+            placeholder="Ask about this lesson…" disabled={sending}
+            className="flex-1 rounded-xl border border-white/10 bg-white/[0.05] px-3 py-2 text-xs text-white outline-none placeholder:text-white/30 focus:border-violet-400/40 disabled:opacity-50" />
+          <button onClick={() => send()} disabled={!input.trim() || sending}
+            className="grid h-9 w-9 place-items-center rounded-xl bg-violet-500/20 text-violet-300 hover:bg-violet-500/30 transition disabled:opacity-40">
+            <Send size={14} />
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  );
+};
 
 const StudentLessons = () => {
   const [enrollments, setEnrollments] = useState([]);
@@ -16,6 +123,7 @@ const StudentLessons = () => {
   const [loadingLessons, setLoadingLessons] = useState(false);
   const [completing, setCompleting] = useState(null);
   const [activeLesson, setActiveLesson] = useState(null);
+  const [aiLesson, setAiLesson] = useState(null);
 
   useEffect(() => {
     studentApi.getEnrolledCourses({ limit: 50 })
@@ -200,6 +308,12 @@ const StudentLessons = () => {
                                       <FileText size={12} /> {r.title}
                                     </a>
                                   ))}
+                                  <button
+                                    onClick={() => setAiLesson({ ...lesson, courseId: selectedCourse?._id })}
+                                    className="flex items-center gap-1 text-xs text-violet-400 hover:text-violet-300 transition"
+                                  >
+                                    <Bot size={12} /> Ask AI
+                                  </button>
                                 </div>
                               </div>
                               {!lesson.isCompleted && (
@@ -221,6 +335,17 @@ const StudentLessons = () => {
           )}
         </div>
       </div>
+
+      {/* Contextual AI Chat Modal */}
+      <AnimatePresence>
+        {aiLesson && (
+          <LessonAIModal
+            lesson={aiLesson}
+            courseTitle={selectedCourse?.title || ""}
+            onClose={() => setAiLesson(null)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 };

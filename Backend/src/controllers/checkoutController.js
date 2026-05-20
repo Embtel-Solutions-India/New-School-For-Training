@@ -2,10 +2,13 @@ import mongoose from "mongoose";
 import Course from "../models/Course.js";
 import Coupon from "../models/Coupon.js";
 import Enrollment from "../models/Enrollment.js";
+import Notification from "../models/Notification.js";
 import Order from "../models/Order.js";
 import Transaction from "../models/Transaction.js";
+import User from "../models/User.js";
 import ApiError from "../utils/ApiError.js";
 import asyncHandler from "../utils/asyncHandler.js";
+import { sendEnrollmentEmail, buildClientUrl } from "../services/emailService.js";
 import {
   constructWebhookEvent,
   createCheckoutSession,
@@ -78,13 +81,16 @@ const processSuccessfulPayment = async ({
   // Create enrollment (skip if already enrolled)
   const existing = await Enrollment.findOne({ user: order.user, course: order.course });
   if (!existing) {
-    const course = await Course.findById(order.course).select("teacher pricing");
+    const course = await Course.findById(order.course)
+      .select("title teacher pricing")
+      .populate("teacher", "name")
+      .lean();
     await Enrollment.create({
       user: order.user,
       course: order.course,
-      teacher: course?.teacher,
+      teacher: course?.teacher?._id || course?.teacher,
       payment: {
-        amount: order.amount / 100, // store in dollars
+        amount: order.amount / 100,
         currency: order.currency,
         method: gateway,
         transactionId: gatewayTransactionId,
@@ -95,6 +101,33 @@ const processSuccessfulPayment = async ({
       status: "active",
     });
     await Course.findByIdAndUpdate(order.course, { $inc: { enrollmentCount: 1 } });
+
+    // Fire-and-forget: enrollment email + notification
+    (async () => {
+      try {
+        const student = await User.findById(order.user).select("name email").lean();
+        if (!student || !course) return;
+        const teacherId = course.teacher?._id || course.teacher;
+        await Promise.allSettled([
+          sendEnrollmentEmail({
+            to: student.email,
+            studentName: student.name,
+            courseTitle: course.title,
+            instructorName: course.teacher?.name || "",
+            dashboardUrl: buildClientUrl("/dashboard"),
+          }),
+          Notification.create({
+            title: "Enrollment Confirmed",
+            message: `Payment successful! You're now enrolled in "${course.title}".`,
+            type: "success",
+            targetAudience: "specific",
+            targetUsers: [order.user],
+            sentBy: teacherId || order.user,
+            isActive: true,
+          }),
+        ]);
+      } catch (_) {}
+    })();
   }
 
   // Increment coupon usage

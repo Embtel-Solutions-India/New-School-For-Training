@@ -199,8 +199,8 @@ const CMSManagement = () => {
       <Dialog open={dialog} onClose={() => setDialog(false)} maxWidth="md" fullWidth
         slotProps={{ paper: { sx: { bgcolor: "#0b1220", color: "white", borderRadius: 5, border: "1px solid rgba(255,255,255,0.1)" } } }}>
         <DialogTitle sx={{ fontWeight: 700 }}>{editing ? "Edit Content" : "Add Content"}</DialogTitle>
-        <DialogContent>
-          <div className="mt-3 space-y-4">
+        <DialogContent sx={{ px: 3, pt: 3 }}>
+          <div className="space-y-5">
             <FormControl fullWidth size="small" disabled={!!editing}>
               <InputLabel sx={{ color: "rgba(255,255,255,0.6)" }}>Content Type</InputLabel>
               <Select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })} label="Content Type" sx={{ color: "white" }}>
@@ -209,7 +209,7 @@ const CMSManagement = () => {
             </FormControl>
             <TextField fullWidth label="Title" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} size="small" InputProps={{ sx: { color: "white" } }} InputLabelProps={{ sx: { color: "rgba(255,255,255,0.6)" } }} />
             <TextField fullWidth multiline rows={4} label="Content" value={form.content} onChange={(e) => setForm({ ...form, content: e.target.value })} size="small" InputProps={{ sx: { color: "white" } }} InputLabelProps={{ sx: { color: "rgba(255,255,255,0.6)" } }} />
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-5">
               <TextField fullWidth label="Image URL" value={form.image} onChange={(e) => setForm({ ...form, image: e.target.value })} size="small" InputProps={{ sx: { color: "white" } }} InputLabelProps={{ sx: { color: "rgba(255,255,255,0.6)" } }} />
               <TextField fullWidth label="Author" value={form.author} onChange={(e) => setForm({ ...form, author: e.target.value })} size="small" InputProps={{ sx: { color: "white" } }} InputLabelProps={{ sx: { color: "rgba(255,255,255,0.6)" } }} />
               <TextField fullWidth label="Display Order" type="number" value={form.order} onChange={(e) => setForm({ ...form, order: parseInt(e.target.value) || 0 })} size="small" InputProps={{ sx: { color: "white" } }} InputLabelProps={{ sx: { color: "rgba(255,255,255,0.6)" } }} />

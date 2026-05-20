@@ -408,7 +408,7 @@ export default function TeacherBlogs() {
           <Tab label="Preview" />
         </Tabs>
 
-        <DialogContent sx={{ pt: 2 }}>
+        <DialogContent sx={{ pt: 3, px: 3 }}>
 
           {/* TAB 0: BASIC INFO */}
           {activeTab === 0 && (
@@ -472,7 +472,7 @@ export default function TeacherBlogs() {
 
           {/* TAB 1: CONTENT */}
           {activeTab === 1 && (
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-4">
 
               {/* HTML TOOLBAR */}
               <div className="flex flex-wrap gap-1.5 p-2 rounded-xl bg-white/5 border border-white/10">
@@ -535,7 +535,7 @@ export default function TeacherBlogs() {
 
         </DialogContent>
 
-        <DialogActions sx={{ px: 3, pb: 2.5, gap: 1 }}>
+        <DialogActions sx={{ px: 3, pb: 3, gap: 1 }}>
           <Button onClick={() => setDialogOpen(false)}
             sx={{ color: "rgba(255,255,255,0.5)", borderRadius: 2, border: "1px solid rgba(255,255,255,0.1)" }}>
             Cancel

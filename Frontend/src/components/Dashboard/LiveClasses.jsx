@@ -299,15 +299,15 @@ const LiveClasses = () => {
       <Dialog open={dialog} onClose={() => setDialog(false)} maxWidth="sm" fullWidth
         slotProps={{ paper: { sx: { bgcolor: "#0b1220", color: "white", borderRadius: 5, border: "1px solid rgba(255,255,255,0.1)" } } }}>
         <DialogTitle sx={{ fontWeight: 700 }}>{editing ? "Edit Session" : "Schedule Live Class"}</DialogTitle>
-        <DialogContent>
-          <div className="mt-2 space-y-4">
+        <DialogContent sx={{ px: 3, pt: 3 }}>
+          <div className="space-y-5">
             <TextField fullWidth label="Session Title *" value={form.title} onChange={(e) => f("title", e.target.value)}
               size="small" InputProps={{ sx: { color: "white" } }} InputLabelProps={{ sx: { color: "rgba(255,255,255,0.6)" } }} />
             <TextField fullWidth multiline rows={2} label="Description" value={form.description} onChange={(e) => f("description", e.target.value)}
               size="small" InputProps={{ sx: { color: "white" } }} InputLabelProps={{ sx: { color: "rgba(255,255,255,0.6)" } }} />
             <TextField fullWidth label="Schedule Date & Time *" type="datetime-local" value={form.scheduledAt} onChange={(e) => f("scheduledAt", e.target.value)}
               size="small" InputLabelProps={{ shrink: true, sx: { color: "rgba(255,255,255,0.6)" } }} InputProps={{ sx: { color: "white" } }} />
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-5">
               <TextField fullWidth label="Duration (minutes)" type="number" value={form.durationMinutes} onChange={(e) => f("durationMinutes", parseInt(e.target.value) || 60)}
                 size="small" inputProps={{ min: 15 }} InputProps={{ sx: { color: "white" } }} InputLabelProps={{ sx: { color: "rgba(255,255,255,0.6)" } }} />
               <FormControl fullWidth size="small">
@@ -368,8 +368,8 @@ const LiveClasses = () => {
       <Dialog open={!!recordingDialog} onClose={() => setRecordingDialog(null)} maxWidth="sm" fullWidth
         slotProps={{ paper: { sx: { bgcolor: "#0b1220", color: "white", borderRadius: 5, border: "1px solid rgba(255,255,255,0.1)" } } }}>
         <DialogTitle sx={{ fontWeight: 700 }}>Attach Recording — {recordingDialog?.title}</DialogTitle>
-        <DialogContent>
-          <div className="mt-2 space-y-4">
+        <DialogContent sx={{ px: 3, pt: 3 }}>
+          <div className="space-y-5">
             <TextField fullWidth label="Recording URL *" value={recForm.url}
               onChange={(e) => setRecForm((p) => ({ ...p, url: e.target.value }))}
               placeholder="https://drive.google.com/... or https://youtube.com/..."
@@ -377,7 +377,7 @@ const LiveClasses = () => {
             <TextField fullWidth label="Recording Title" value={recForm.title}
               onChange={(e) => setRecForm((p) => ({ ...p, title: e.target.value }))}
               size="small" InputProps={{ sx: { color: "white" } }} InputLabelProps={{ sx: { color: "rgba(255,255,255,0.6)" } }} />
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-5">
               <FormControl fullWidth size="small">
                 <InputLabel sx={{ color: "rgba(255,255,255,0.6)" }}>Platform</InputLabel>
                 <Select value={recForm.platform} onChange={(e) => setRecForm((p) => ({ ...p, platform: e.target.value }))} label="Platform" sx={{ color: "white" }}>

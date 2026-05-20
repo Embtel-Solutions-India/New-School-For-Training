@@ -4,6 +4,7 @@ import { Button, Pagination, Skeleton } from "@mui/material";
 import { Bell, BellOff, CheckCheck, Info, Megaphone, Shield, Zap } from "lucide-react";
 import toast from "react-hot-toast";
 import studentApi from "../../services/studentApi";
+import { getSocket } from "../../services/socketClient";
 
 const glass = "border border-white/10 bg-white/[0.07] shadow-[0_24px_90px_rgba(0,0,0,0.32)] backdrop-blur-2xl";
 
@@ -36,6 +37,15 @@ const StudentNotifications = () => {
   }, [page, filter]);
 
   useEffect(() => { fetchNotifications(); }, [fetchNotifications]);
+
+  // Real-time: increment unread count when a live class starts
+  useEffect(() => {
+    const socket = getSocket();
+    if (!socket) return;
+    const handler = () => setUnreadCount((c) => c + 1);
+    socket.on("live-class-started", handler);
+    return () => socket.off("live-class-started", handler);
+  }, []);
 
   const handleMarkRead = async (id) => {
     try {

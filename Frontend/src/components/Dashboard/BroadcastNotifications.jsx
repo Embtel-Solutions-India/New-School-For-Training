@@ -184,8 +184,8 @@ const BroadcastNotifications = () => {
         <DialogTitle sx={{ fontWeight: 700, display: "flex", alignItems: "center", gap: 1.5 }}>
           <Send size={20} /> New Broadcast Notification
         </DialogTitle>
-        <DialogContent>
-          <div className="mt-3 space-y-4">
+        <DialogContent sx={{ px: 3, pt: 3 }}>
+          <div className="space-y-5">
             <TextField fullWidth label="Notification Title" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })}
               size="small" inputProps={{ maxLength: 120 }}
               InputProps={{ sx: { color: "white" } }} InputLabelProps={{ sx: { color: "rgba(255,255,255,0.6)" } }} />

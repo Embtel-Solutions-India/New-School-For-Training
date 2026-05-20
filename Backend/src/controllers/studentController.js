@@ -14,6 +14,7 @@ import Bookmark from "../models/Bookmark.js";
 import Certificate from "../models/Certificate.js";
 import ApiError from "../utils/ApiError.js";
 import asyncHandler from "../utils/asyncHandler.js";
+import { sendEnrollmentEmail, sendCompletionEmail, sendCertificateEmail, buildClientUrl } from "../services/emailService.js";
 
 const oid = (id) => new mongoose.Types.ObjectId(id);
 
@@ -195,6 +196,31 @@ export const enrollInCourse = asyncHandler(async (req, res) => {
 
   await Course.findByIdAndUpdate(courseId, { $inc: { enrollmentCount: 1 } });
 
+  // Fire-and-forget: email + in-app notification
+  const populatedCourse = await Course.findById(courseId)
+    .select("title teacher")
+    .populate("teacher", "name")
+    .lean();
+  const student = await User.findById(studentId).select("name email").lean();
+  if (student && populatedCourse) {
+    sendEnrollmentEmail({
+      to: student.email,
+      studentName: student.name,
+      courseTitle: populatedCourse.title,
+      instructorName: populatedCourse.teacher?.name || "",
+      dashboardUrl: buildClientUrl("/dashboard"),
+    }).catch(() => {});
+    Notification.create({
+      title: "Enrollment Confirmed",
+      message: `You're now enrolled in "${populatedCourse.title}". Start learning!`,
+      type: "success",
+      targetAudience: "specific",
+      targetUsers: [studentId],
+      sentBy: populatedCourse.teacher?._id || studentId,
+      isActive: true,
+    }).catch(() => {});
+  }
+
   res.status(201).json({ success: true, message: "Enrolled successfully!", enrollment });
 });
 
@@ -274,6 +300,57 @@ export const markLessonComplete = asyncHandler(async (req, res) => {
       { student: req.user._id, course: courseId, enrollment: enrollment._id, certificateId: certId, issuedAt: new Date() },
       { upsert: true, new: true }
     );
+
+    // Fire-and-forget: emails + notifications on completion
+    (async () => {
+      try {
+        const [fullCourse, student] = await Promise.all([
+          Course.findById(courseId).select("title teacher").populate("teacher", "name").lean(),
+          User.findById(req.user._id).select("name email").lean(),
+        ]);
+        if (!fullCourse || !student) return;
+        const teacherId = fullCourse.teacher?._id || req.user._id;
+        const dashboardUrl = buildClientUrl("/dashboard");
+        const downloadUrl = buildClientUrl(`/dashboard`);
+        const verifyUrl = buildClientUrl(`/dashboard`);
+
+        await Promise.allSettled([
+          sendCompletionEmail({
+            to: student.email,
+            studentName: student.name,
+            courseTitle: fullCourse.title,
+            instructorName: fullCourse.teacher?.name || "",
+            dashboardUrl,
+          }),
+          sendCertificateEmail({
+            to: student.email,
+            studentName: student.name,
+            courseTitle: fullCourse.title,
+            certificateId: certId,
+            downloadUrl,
+            verifyUrl,
+          }),
+          Notification.create({
+            title: "Course Completed!",
+            message: `Congratulations! You completed "${fullCourse.title}". Your certificate is ready.`,
+            type: "success",
+            targetAudience: "specific",
+            targetUsers: [req.user._id],
+            sentBy: teacherId,
+            isActive: true,
+          }),
+          Notification.create({
+            title: "Certificate Issued",
+            message: `Your certificate for "${fullCourse.title}" has been issued. ID: ${certId}`,
+            type: "info",
+            targetAudience: "specific",
+            targetUsers: [req.user._id],
+            sentBy: teacherId,
+            isActive: true,
+          }),
+        ]);
+      } catch (_) {}
+    })();
   }
   await enrollment.save();
 
