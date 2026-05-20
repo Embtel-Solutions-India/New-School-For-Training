@@ -82,7 +82,7 @@ const Navbar = () => {
         </Avatar>
         <ShieldCheck size={16} className="text-green-700" />
       </button>
-      <MuiMenu anchorEl={profileAnchor} open={Boolean(profileAnchor)} onClose={() => setProfileAnchor(null)} PaperProps={{ className: "!rounded-2xl !mt-2" }}>
+      <MuiMenu anchorEl={profileAnchor} open={Boolean(profileAnchor)} onClose={() => setProfileAnchor(null)} slotProps={{ paper: { className: "!rounded-2xl !mt-2" } }}>
         <MenuItem onClick={() => navigate("/dashboard")}>
           <div>
             <p className="font-semibold text-gray-900">{user.name}</p>

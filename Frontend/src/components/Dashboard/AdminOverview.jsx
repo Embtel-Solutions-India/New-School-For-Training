@@ -4,8 +4,11 @@ import { Skeleton } from "@mui/material";
 import {
   Activity,
   BookOpen,
+  CalendarClock,
   DollarSign,
   GraduationCap,
+  Newspaper,
+  RefreshCw,
   ShoppingCart,
   TrendingUp,
   UserCheck,
@@ -173,6 +176,35 @@ const AdminOverview = () => {
       trend: "Needs review",
       color: "from-yellow-400 to-orange-500",
       icon: TrendingUp,
+    },
+    {
+      label: "Monthly Revenue",
+      rawValue: summary?.monthlyRevenue || 0,
+      prefix: "$",
+      trend: "This month",
+      color: "from-teal-400 to-emerald-500",
+      icon: RefreshCw,
+    },
+    {
+      label: "Active Subscriptions",
+      rawValue: summary?.activeSubscriptions || 0,
+      trend: "Currently active",
+      color: "from-fuchsia-400 to-purple-500",
+      icon: Activity,
+    },
+    {
+      label: "Blogs Published",
+      rawValue: summary?.publishedBlogs || 0,
+      trend: "Live articles",
+      color: "from-pink-400 to-rose-500",
+      icon: Newspaper,
+    },
+    {
+      label: "Live Classes",
+      rawValue: summary?.liveClassesTotal || 0,
+      trend: "Total sessions",
+      color: "from-amber-400 to-yellow-500",
+      icon: CalendarClock,
     },
   ];
 

@@ -37,14 +37,18 @@ const deleteAssignment = (courseId, assignId) => api.delete(`${T}/courses/${cour
 
 // ── Live Classes
 const getLiveClasses = (params) => api.get(`${T}/live`, { params });
+const getLiveClass = (id) => api.get(`${T}/live/${id}`);
 const createLiveClass = (data) => api.post(`${T}/live`, data);
 const updateLiveClass = (id, data) => api.patch(`${T}/live/${id}`, data);
 const deleteLiveClass = (id) => api.delete(`${T}/live/${id}`);
+const cancelLiveClass = (id) => api.patch(`${T}/live/${id}/cancel`);
 const startLiveClass = (id) => api.patch(`${T}/live/${id}/start`);
 const endLiveClass = (id, data) => api.patch(`${T}/live/${id}/end`, data);
 const getSessionAttendance = (sessionId) => api.get(`${T}/live/${sessionId}/attendance`);
 const markAttendance = (sessionId, data) => api.post(`${T}/live/${sessionId}/attendance`, data);
 const getAttendanceReport = (params) => api.get(`${T}/attendance/report`, { params });
+const attachRecording = (id, data) => api.post(`${T}/live/${id}/recording`, data);
+const getRecordings = (id) => api.get(`${T}/live/${id}/recordings`);
 
 // ── Notifications
 const sendNotification = (data) => api.post(`${T}/notifications`, data);
@@ -82,8 +86,10 @@ const teacherApi = {
   createLesson, updateLesson, deleteLesson, reorderLessons,
   createQuiz, updateQuiz, deleteQuiz,
   createAssignment, updateAssignment, deleteAssignment,
-  getLiveClasses, createLiveClass, updateLiveClass, deleteLiveClass,
-  startLiveClass, endLiveClass, getSessionAttendance, markAttendance, getAttendanceReport,
+  getLiveClasses, getLiveClass, createLiveClass, updateLiveClass, deleteLiveClass,
+  cancelLiveClass, startLiveClass, endLiveClass,
+  getSessionAttendance, markAttendance, getAttendanceReport,
+  attachRecording, getRecordings,
   sendNotification,
   getStudents, getProgressAnalytics, updateStudentProgress,
   getReviews, replyToReview, deleteReviewReply,

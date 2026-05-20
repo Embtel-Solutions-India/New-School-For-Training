@@ -101,6 +101,7 @@ export const uploadToS3Multipart = async ({
       });
 
       await axios.put(presignedUrl, chunk, {
+        headers: { "Content-Type": file.type },
         signal,
         onUploadProgress: (event) => {
           if (event.loaded) {

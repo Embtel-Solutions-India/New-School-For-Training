@@ -13,6 +13,8 @@ const getEnrolledCourses = (params) => api.get(`${S}/enrolled`, { params });
 // ── Lessons
 const getCourseLessons = (courseId) => api.get(`${S}/courses/${courseId}/lessons`);
 const markLessonComplete = (courseId, lessonId) => api.post(`${S}/courses/${courseId}/lessons/${lessonId}/complete`);
+const saveLessonProgress = (courseId, lessonId, data) => api.post(`${S}/courses/${courseId}/lessons/${lessonId}/progress`, data);
+const getLessonProgress = (courseId, lessonId) => api.get(`${S}/courses/${courseId}/lessons/${lessonId}/progress`);
 
 // ── Certificates
 const getMyCertificates = () => api.get(`${S}/certificates`);
@@ -21,8 +23,14 @@ const verifyCertificate = (certId) => api.get(`${S}/certificates/verify/${certId
 // ── Learning Progress
 const getLearningProgress = () => api.get(`${S}/progress`);
 
+// ── Video Playback (signed S3 URLs)
+const getVideoSignedUrl = (lessonId) => api.get(`/lesson/video/${lessonId}`);
+
 // ── Live Classes
 const getUpcomingLiveClasses = () => api.get(`${S}/live`);
+const joinLiveClass = (id) => api.post(`${S}/live/${id}/join`);
+const leaveLiveClass = (id) => api.post(`${S}/live/${id}/leave`);
+const getAttendanceHistory = () => api.get(`${S}/live/attendance`);
 
 // ── Assignments
 const getMyAssignments = (params) => api.get(`${S}/assignments`, { params });
@@ -63,10 +71,11 @@ const changePassword = (data) => api.patch(`${S}/profile/password`, data);
 const studentApi = {
   getOverview,
   getAllCourses, getCourseCategories, getEnrolledCourses, enrollCourse,
-  getCourseLessons, markLessonComplete,
+  getCourseLessons, markLessonComplete, saveLessonProgress, getLessonProgress,
+  getVideoSignedUrl,
   getMyCertificates, verifyCertificate,
   getLearningProgress,
-  getUpcomingLiveClasses,
+  getUpcomingLiveClasses, joinLiveClass, leaveLiveClass, getAttendanceHistory,
   getMyAssignments, submitAssignment,
   getQuizHistory, getCourseQuizzes, submitQuizAttempt,
   getLeaderboard, getMyAchievements,

@@ -42,6 +42,7 @@ import BroadcastNotifications from "./BroadcastNotifications";
 import CMSManagement from "./CMSManagement";
 import AuditLogs from "./AuditLogs";
 import SiteSettings from "./SiteSettings";
+import AdminBlogs from "./AdminBlogs";
 
 // Teacher section components
 import TeacherOverview from "./TeacherOverview";
@@ -115,6 +116,7 @@ const sectionTitles = {
   cms: "CMS Management",
   "audit-logs": "Audit Logs",
   settings: "Site Settings",
+  blogs: "Blog Moderation",
 };
 
 const glass = "border border-white/10 bg-white/[0.07] shadow-[0_24px_90px_rgba(0,0,0,0.32)] backdrop-blur-2xl";
@@ -132,6 +134,7 @@ const AdminSectionRouter = ({ section }) => {
     cms: <CMSManagement />,
     "audit-logs": <AuditLogs />,
     settings: <SiteSettings />,
+    blogs: <AdminBlogs />,
   };
   return map[section] || <AdminOverview />;
 };
@@ -291,7 +294,7 @@ const SidebarContent = ({ role, activeSection, expanded, collapsed, mobile, onSe
             collapsed={collapsed && !mobile} onSelect={onSelect} onExpand={onExpand} />
         ))}
       </nav>
-      <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.05] p-3">
+      {/* <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.05] p-3">
         <div className="flex items-center gap-3">
           <div className="grid h-9 w-9 place-items-center rounded-xl bg-emerald-400/15 text-emerald-200">
             <Command size={17} />
@@ -303,7 +306,7 @@ const SidebarContent = ({ role, activeSection, expanded, collapsed, mobile, onSe
             </div>
           )}
         </div>
-      </div>
+      </div> */}
     </div>
   );
 };

@@ -57,6 +57,5 @@ const enrollmentSchema = new mongoose.Schema(
 
 enrollmentSchema.index({ user: 1, course: 1 }, { unique: true });
 enrollmentSchema.index({ createdAt: -1 });
-enrollmentSchema.index({ "payment.status": 1 });
 
 export default mongoose.model("Enrollment", enrollmentSchema);

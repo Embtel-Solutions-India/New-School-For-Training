@@ -11,13 +11,22 @@ const couponSchema = new mongoose.Schema(
       minlength: [3, "Code must be at least 3 characters"],
       maxlength: [20, "Code must be at most 20 characters"],
       match: [/^[A-Z0-9_-]+$/, "Code can only contain letters, numbers, dashes, underscores"],
-      index: true,
+    },
+    discountType: {
+      type: String,
+      enum: ["percent", "flat"],
+      default: "percent",
     },
     discountPercent: {
       type: Number,
-      required: [true, "Discount percent is required"],
       min: [1, "Discount must be at least 1%"],
       max: [100, "Discount cannot exceed 100%"],
+      default: 0,
+    },
+    flatAmount: {
+      type: Number,
+      default: 0,
+      min: 0,
     },
     usageLimit: {
       type: Number,

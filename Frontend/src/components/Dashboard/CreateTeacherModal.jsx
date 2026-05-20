@@ -64,7 +64,7 @@ const CreateTeacherModal = ({ open, onClose, onSuccess }) => {
   };
 
   return (
-    <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth PaperProps={{ className: "!bg-[#0b1220] !text-white !rounded-3xl" }}>
+    <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth slotProps={{ paper: { className: "!bg-[#0b1220] !text-white !rounded-3xl" } }}>
       <DialogTitle className="!text-white !font-bold">Create New Teacher</DialogTitle>
 
       <DialogContent className="!space-y-4 !pt-4">

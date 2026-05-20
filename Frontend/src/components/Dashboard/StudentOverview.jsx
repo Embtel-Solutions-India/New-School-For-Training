@@ -114,7 +114,7 @@ const StudentOverview = () => {
               <p>Start completing lessons to see your progress!</p>
             </div>
           ) : (
-            <div style={{ height: 220 }}>
+            <div style={{ height: 220 }} className="w-full min-w-0">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={weeklyChart}>
                   <defs>

@@ -7,7 +7,7 @@ const SessionExpiredModal = () => {
   const { sessionExpired, clearSessionExpired } = useAuthStore();
 
   return (
-    <Dialog open={sessionExpired} onClose={clearSessionExpired} PaperProps={{ className: "!rounded-[24px]" }}>
+    <Dialog open={sessionExpired} onClose={clearSessionExpired} slotProps={{ paper: { className: "!rounded-[24px]" } }}>
       <DialogTitle className="!font-bold !text-gray-900">Session expired</DialogTitle>
       <DialogContent className="!text-gray-400">
         Your secure session ended. Please sign in again to continue.

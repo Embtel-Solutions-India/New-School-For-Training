@@ -4,8 +4,10 @@ import User from "../models/User.js";
 import Course from "../models/Course.js";
 import Enrollment from "../models/Enrollment.js";
 import LiveClass from "../models/LiveClass.js";
+import Attendance from "../models/Attendance.js";
 import Notification from "../models/Notification.js";
 import LessonCompletion from "../models/LessonCompletion.js";
+import LessonProgress from "../models/LessonProgress.js";
 import Submission from "../models/Submission.js";
 import QuizAttempt from "../models/QuizAttempt.js";
 import Bookmark from "../models/Bookmark.js";
@@ -785,4 +787,107 @@ export const changeStudentPassword = asyncHandler(async (req, res) => {
   user.password = newPassword;
   await user.save();
   res.json({ success: true, message: "Password changed successfully" });
+});
+
+// ─────────────────────── LESSON VIDEO PROGRESS ───────────────────────
+
+export const saveLessonProgress = asyncHandler(async (req, res) => {
+  const { courseId, lessonId } = req.params;
+  const { lastPosition = 0, watchedDuration = 0, duration = 0, completed = false } = req.body;
+
+  const enrollment = await Enrollment.findOne({ user: req.user._id, course: courseId });
+  if (!enrollment) throw new ApiError(403, "Not enrolled in this course");
+
+  const progress = await LessonProgress.findOneAndUpdate(
+    { user: req.user._id, course: oid(courseId), lessonId: oid(lessonId) },
+    { lastPosition, watchedDuration, duration, completed },
+    { upsert: true, new: true }
+  );
+
+  // Mirror to LessonCompletion if newly completed
+  if (completed) {
+    const alreadyDone = await LessonCompletion.findOne({ student: req.user._id, course: courseId, lessonId: oid(lessonId) });
+    if (!alreadyDone) {
+      await LessonCompletion.create({ student: req.user._id, course: courseId, lessonId: oid(lessonId) });
+
+      // Recalculate enrollment progress
+      const course = await Course.findById(courseId).select("curriculum.lessons").lean();
+      const totalLessons = course?.curriculum?.lessons?.length || 0;
+      if (totalLessons > 0) {
+        const completedCount = await LessonCompletion.countDocuments({ student: req.user._id, course: courseId });
+        const newProgress = Math.round((completedCount / totalLessons) * 100);
+        const isCompleted = completedCount >= totalLessons;
+        await Enrollment.findOneAndUpdate(
+          { user: req.user._id, course: courseId },
+          { progress: newProgress, isCompleted, ...(isCompleted ? { completedAt: new Date() } : {}) }
+        );
+      }
+    }
+  }
+
+  res.json({ success: true, progress });
+});
+
+export const getLessonProgress = asyncHandler(async (req, res) => {
+  const { courseId, lessonId } = req.params;
+
+  const enrollment = await Enrollment.findOne({ user: req.user._id, course: courseId });
+  if (!enrollment) throw new ApiError(403, "Not enrolled in this course");
+
+  const progress = await LessonProgress.findOne({
+    user: req.user._id,
+    course: oid(courseId),
+    lessonId: oid(lessonId),
+  }).lean();
+
+  res.json({ success: true, progress: progress || null });
+});
+
+// ─────────────────────── LIVE CLASS ATTENDANCE ───────────────────────
+
+export const joinLiveClass = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const cls = await LiveClass.findById(id).lean();
+  if (!cls) throw new ApiError(404, "Live class not found");
+  if (cls.status === "cancelled") throw new ApiError(400, "This class has been cancelled");
+  if (cls.status === "ended") throw new ApiError(400, "This class has already ended");
+
+  if (cls.course) {
+    const enrollment = await Enrollment.findOne({ user: req.user._id, course: cls.course });
+    if (!enrollment) throw new ApiError(403, "Not enrolled in this course");
+  }
+
+  await Attendance.findOneAndUpdate(
+    { session: cls._id, student: req.user._id },
+    {
+      teacher: cls.teacher,
+      course: cls.course || null,
+      status: "present",
+      markedAt: new Date(),
+    },
+    { upsert: true, new: true }
+  );
+
+  const count = await Attendance.countDocuments({ session: cls._id, status: "present" });
+  await LiveClass.findByIdAndUpdate(cls._id, { attendanceCount: count });
+
+  res.json({ success: true, meetingLink: cls.meetingLink });
+});
+
+export const leaveLiveClass = asyncHandler(async (req, res) => {
+  // Intentionally lightweight — attendance is already marked on join.
+  res.json({ success: true });
+});
+
+export const getAttendanceHistory = asyncHandler(async (req, res) => {
+  const records = await Attendance.find({ student: req.user._id })
+    .populate({
+      path: "session",
+      select: "title scheduledAt durationMinutes status recordingUrl meetingLink",
+    })
+    .populate("course", "title thumbnail")
+    .sort({ markedAt: -1 })
+    .lean();
+
+  res.json({ success: true, records });
 });

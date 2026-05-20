@@ -120,7 +120,13 @@ const CourseDetailPage = () => {
   const user = useAuthStore((s) => s.user);
   const { course, loading, error } = useCourseDetail(courseId);
 
-  const handleEnroll = () => navigate(user ? "/dashboard" : "/login");
+  const isFree = (course?.pricing?.price ?? 0) === 0;
+
+  const handleEnroll = () => {
+    if (!user) return navigate("/login");
+    if (!isFree) return navigate(`/checkout/${courseId}`);
+    navigate("/dashboard");
+  };
 
   const hasWeeklyPlan = course?.weeklyPlan?.length > 0;
   const hasSkills = course?.skills?.length > 0;
@@ -259,7 +265,11 @@ const CourseDetailPage = () => {
                     )}
                     <Button fullWidth onClick={handleEnroll} variant="contained"
                       sx={{ py: 1.5, borderRadius: 2, bgcolor: "#15803d", fontWeight: 700, fontSize: 15, "&:hover": { bgcolor: "#f97316" } }}>
-                      {user ? "Go to Dashboard" : "Enroll Now"}
+                      {!user
+                        ? "Enroll Now"
+                        : !isFree
+                        ? "Buy Now"
+                        : "Go to Dashboard"}
                     </Button>
                     {!user && (
                       <p className="text-center text-xs text-gray-400">

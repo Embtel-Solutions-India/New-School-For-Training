@@ -321,7 +321,7 @@ const TeacherManagement = () => {
       </motion.div>
 
       {/* Create / Edit Dialog */}
-      <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="sm" fullWidth PaperProps={{ sx: { bgcolor: "#0b1220", color: "white", borderRadius: 5, border: "1px solid rgba(255,255,255,0.1)" } }}>
+      <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="sm" fullWidth slotProps={{ paper: { sx: { bgcolor: "#0b1220", color: "white", borderRadius: 5, border: "1px solid rgba(255,255,255,0.1)" } } }}>
         <DialogTitle sx={{ fontWeight: 700, fontSize: 20 }}>
           {editingTeacher ? "Edit Teacher" : "Create New Teacher"}
         </DialogTitle>
@@ -345,7 +345,7 @@ const TeacherManagement = () => {
       </Dialog>
 
       {/* Reset Password Dialog */}
-      <Dialog open={Boolean(resetPwdDialog)} onClose={() => setResetPwdDialog(null)} maxWidth="xs" fullWidth PaperProps={{ sx: { bgcolor: "#0b1220", color: "white", borderRadius: 5, border: "1px solid rgba(255,255,255,0.1)" } }}>
+      <Dialog open={Boolean(resetPwdDialog)} onClose={() => setResetPwdDialog(null)} maxWidth="xs" fullWidth slotProps={{ paper: { sx: { bgcolor: "#0b1220", color: "white", borderRadius: 5, border: "1px solid rgba(255,255,255,0.1)" } } }}>
         <DialogTitle sx={{ fontWeight: 700 }}>Reset Password</DialogTitle>
         <DialogContent>
           <p className="mb-4 text-sm text-white/60">Set a new password for <span className="font-semibold text-white">{resetPwdDialog?.name}</span></p>

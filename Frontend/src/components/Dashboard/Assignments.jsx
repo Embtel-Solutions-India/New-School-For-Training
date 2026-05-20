@@ -165,7 +165,7 @@ const Assignments = () => {
 
       {/* Dialog */}
       <Dialog open={dialog} onClose={() => setDialog(false)} maxWidth="sm" fullWidth
-        PaperProps={{ sx: { bgcolor: "#0b1220", color: "white", borderRadius: 5, border: "1px solid rgba(255,255,255,0.1)" } }}>
+        slotProps={{ paper: { sx: { bgcolor: "#0b1220", color: "white", borderRadius: 5, border: "1px solid rgba(255,255,255,0.1)" } } }}>
         <DialogTitle sx={{ fontWeight: 700 }}>{editing ? "Edit Assignment" : "Create Assignment"}</DialogTitle>
         <DialogContent>
           <div className="mt-2 space-y-4">

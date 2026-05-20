@@ -58,7 +58,7 @@ const LearningProgress = () => {
         <div className={`rounded-[24px] ${glass} p-6`}>
           <p className="mb-4 font-semibold">Daily Activity (Last 7 Days)</p>
           {loading ? <Skeleton variant="rounded" height={220} sx={{ bgcolor: "rgba(255,255,255,0.06)", borderRadius: 3 }} /> : (
-            <div style={{ height: 220 }}>
+            <div style={{ height: 220 }} className="w-full min-w-0">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={data?.dailyActivity || []}>
                   <CartesianGrid stroke="rgba(255,255,255,0.07)" vertical={false} />
@@ -78,7 +78,7 @@ const LearningProgress = () => {
         <div className={`rounded-[24px] ${glass} p-6`}>
           <p className="mb-4 font-semibold">Weekly Learning Trend</p>
           {loading ? <Skeleton variant="rounded" height={220} sx={{ bgcolor: "rgba(255,255,255,0.06)", borderRadius: 3 }} /> : (
-            <div style={{ height: 220 }}>
+            <div style={{ height: 220 }} className="w-full min-w-0">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={(data?.weeklyLessons || []).map((w, i) => ({ week: `Wk ${i + 1}`, lessons: w.lessons }))}>
                   <defs>

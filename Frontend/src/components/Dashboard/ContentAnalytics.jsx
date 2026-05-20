@@ -68,7 +68,7 @@ const ContentAnalytics = () => {
         <div className={`rounded-[24px] ${glass} p-6`}>
           <p className="mb-4 font-semibold">Top Courses by Enrollment</p>
           {loading ? <Skeleton variant="rounded" height={240} sx={{ bgcolor: "rgba(255,255,255,0.06)", borderRadius: 3 }} /> : (
-            <div style={{ height: 240 }}>
+            <div style={{ height: 240 }} className="w-full min-w-0">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={topCourses.map((c) => ({ name: c.title?.slice(0, 18) + (c.title?.length > 18 ? "…" : ""), enrollments: c.totalStudents }))} layout="vertical">
                   <CartesianGrid stroke="rgba(255,255,255,0.07)" horizontal={false} />
@@ -89,7 +89,7 @@ const ContentAnalytics = () => {
         <div className={`rounded-[24px] ${glass} p-6`}>
           <p className="mb-4 font-semibold">Weekly Enrollment Trend</p>
           {loading ? <Skeleton variant="rounded" height={240} sx={{ bgcolor: "rgba(255,255,255,0.06)", borderRadius: 3 }} /> : (
-            <div style={{ height: 240 }}>
+            <div style={{ height: 240 }} className="w-full min-w-0">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={weeklyTrend}>
                   <defs>

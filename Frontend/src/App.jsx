@@ -6,6 +6,9 @@ import Register from "./pages/Register";
 import AboutPage from "./pages/AboutPage";
 import CourseShowcase from "./pages/CoursePage";
 import CourseDetailPage from "./pages/CourseDetailPage";
+import CheckoutPage from "./pages/CheckoutPage";
+import PaymentSuccessPage from "./pages/PaymentSuccessPage";
+import PaymentCancelPage from "./pages/PaymentCancelPage";
 import BlogPage from "./pages/BlogPage";
 import BlogDetailPage from "./pages/BlogDetailPage";
 import ContactPage from "./pages/ContactPage";
@@ -41,12 +44,10 @@ const accessToken = useAuthStore((state) => state.accessToken);
 
 useEffect(() => {
   if (!hydrated) return;
-
-  // only refresh if user exists but token missing
-  if (user && !accessToken) {
+  if (user) {
     hydrateSession();
   }
-}, [hydrated, user, accessToken, hydrateSession]);
+}, [hydrated, hydrateSession]);
 
   return (
     <BrowserRouter>
@@ -73,6 +74,9 @@ useEffect(() => {
         />
         <Route path="/courses" element={<CourseShowcase />} />
         <Route path="/courses/:courseId" element={<CourseDetailPage />} />
+        <Route path="/checkout/:courseId" element={<CheckoutPage />} />
+        <Route path="/checkout/success" element={<PaymentSuccessPage />} />
+        <Route path="/checkout/cancel" element={<PaymentCancelPage />} />
         <Route path="/about" element={<AboutPage />} />
         <Route path="/blog" element={<BlogPage />} />
         <Route path="/blog/:slug" element={<BlogDetailPage />} />

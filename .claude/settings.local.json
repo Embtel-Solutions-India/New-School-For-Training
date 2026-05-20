@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\acer\\\\OneDrive\\\\Desktop\\\\SFT2\" -Recurse -ErrorAction SilentlyContinue)",
+      "Bash(Select-Object FullName)",
+      "Bash(grep -E \"\\\\.\\(js|jsx|ts|tsx\\)$\")"
+    ]
+  }
+}

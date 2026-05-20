@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import {
-  Button, Chip, CircularProgress, Dialog, DialogActions, DialogContent,
-  DialogTitle, FormControl, IconButton, InputLabel, MenuItem, Pagination,
+  Button, CircularProgress, Dialog, DialogActions, DialogContent,
+  DialogTitle, FormControl, IconButton, InputLabel, MenuItem,
   Select, Skeleton, Tab, Tabs, TextField, Tooltip,
 } from "@mui/material";
-import { Edit, Eye, FileText, Globe, Plus, Trash2, X } from "lucide-react";
+import { Edit, Eye, FileText, Globe, ImagePlus, Plus, Send, Trash2, X } from "lucide-react";
 import toast from "react-hot-toast";
 import blogApi from "../../services/blogApi";
+import { requestPresignedUrl, uploadToS3 } from "../../services/uploadService";
 
 const glass = "border border-white/10 bg-white/[0.07] shadow-[0_24px_90px_rgba(0,0,0,0.32)] backdrop-blur-2xl";
 
@@ -25,8 +26,11 @@ const inputSx = {
 };
 
 const STATUS_MAP = {
-  draft: { label: "Draft", color: "rgba(148,163,184,0.15)", text: "#94a3b8" },
-  published: { label: "Published", color: "rgba(34,197,94,0.15)", text: "#86efac" },
+  draft:     { label: "Draft",              color: "rgba(148,163,184,0.15)", text: "#94a3b8" },
+  pending:   { label: "Pending Review",     color: "rgba(251,191,36,0.15)",  text: "#fbbf24" },
+  approved:  { label: "Approved",           color: "rgba(34,197,94,0.15)",   text: "#86efac" },
+  rejected:  { label: "Rejected",           color: "rgba(239,68,68,0.15)",   text: "#f87171" },
+  published: { label: "Published",          color: "rgba(34,197,94,0.15)",   text: "#86efac" },
 };
 
 const BLOG_CATEGORIES = [
@@ -62,8 +66,10 @@ export default function TeacherBlogs() {
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
+  const [submitting, setSubmitting] = useState(null);
   const [activeTab, setActiveTab] = useState(0);
   const [deleting, setDeleting] = useState(null);
+  const [coverUploading, setCoverUploading] = useState(false);
   const contentRef = useRef(null);
 
   const load = useCallback(() => {
@@ -129,25 +135,18 @@ export default function TeacherBlogs() {
     setSaving(true);
     const payload = {
       ...form,
+      status: "draft",
       tags: form.tags.split(",").map((t) => t.trim()).filter(Boolean),
     };
     try {
       if (editing) {
         const { data } = await blogApi.updateBlog(editing, payload);
         setBlogs((prev) => prev.map((b) => (b._id === editing ? data.blog : b)));
-        toast.success(
-          data.blog.status === "published"
-            ? "Blog published! Now visible to readers."
-            : "Blog saved as draft."
-        );
+        toast.success("Blog saved as draft.");
       } else {
         const { data } = await blogApi.createBlog(payload);
         setBlogs((prev) => [data.blog, ...prev]);
-        toast.success(
-          data.blog.status === "published"
-            ? "Blog published! Now visible to readers."
-            : "Blog saved as draft."
-        );
+        toast.success("Blog saved as draft.");
       }
       setDialogOpen(false);
     } catch (err) {
@@ -158,15 +157,11 @@ export default function TeacherBlogs() {
   };
 
   const togglePublish = async (blog) => {
-    const next = blog.status === "published" ? "draft" : "published";
+    if (blog.status !== "published") return;
     try {
-      const { data } = await blogApi.updateBlog(blog._id, { status: next });
+      const { data } = await blogApi.updateBlog(blog._id, { status: "draft" });
       setBlogs((prev) => prev.map((b) => (b._id === blog._id ? data.blog : b)));
-      toast.success(
-        next === "published"
-          ? "Blog published! Now visible to readers."
-          : "Blog unpublished."
-      );
+      toast.success("Blog unpublished and moved to drafts.");
     } catch {
       toast.error("Failed to update status");
     }
@@ -185,8 +180,39 @@ export default function TeacherBlogs() {
     }
   };
 
+  const handleSubmitForReview = async (id) => {
+    setSubmitting(id);
+    try {
+      const { data } = await blogApi.submitForReview(id);
+      setBlogs((prev) => prev.map((b) => (b._id === id ? data.blog : b)));
+      toast.success("Blog submitted for admin review");
+    } catch (err) {
+      toast.error(err?.response?.data?.message || "Failed to submit for review");
+    } finally {
+      setSubmitting(null);
+    }
+  };
+
+  const handleCoverUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) { toast.error("Only images allowed"); return; }
+    setCoverUploading(true);
+    try {
+      const { data } = await requestPresignedUrl({ fileName: file.name, fileType: file.type, resourceType: "image" });
+      await uploadToS3(data.presignedUrl, file);
+      setForm((f) => ({ ...f, featuredImage: data.fileUrl }));
+      toast.success("Cover image uploaded");
+    } catch {
+      toast.error("Cover image upload failed");
+    } finally {
+      setCoverUploading(false);
+    }
+  };
+
   const published = blogs.filter((b) => b.status === "published").length;
   const drafts = blogs.filter((b) => b.status === "draft").length;
+  const pending = blogs.filter((b) => b.status === "pending").length;
 
   return (
     <div className="space-y-6">
@@ -209,10 +235,11 @@ export default function TeacherBlogs() {
       </div>
 
       {/* STATS */}
-      <div className="grid sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
           { label: "Total Posts", value: blogs.length, color: "text-white" },
           { label: "Published", value: published, color: "text-green-400" },
+          { label: "Pending", value: pending, color: "text-amber-400" },
           { label: "Drafts", value: drafts, color: "text-slate-400" },
         ].map(({ label, value, color }) => (
           <div key={label} className={`${glass} rounded-2xl p-5`}>
@@ -283,23 +310,41 @@ export default function TeacherBlogs() {
                   <span>{new Date(blog.createdAt).toLocaleDateString()}</span>
                 </div>
 
-                {/* Draft warning */}
+                {/* Status-specific notices */}
                 {blog.status === "draft" && (
-                  <p className="text-xs text-amber-400/80 flex items-center gap-1">
-                    ⚠ Draft — not visible to readers. Click Publish to go live.
-                  </p>
+                  <p className="text-xs text-amber-400/80">⚠ Draft — submit for admin review to publish.</p>
+                )}
+                {blog.status === "pending" && (
+                  <p className="text-xs text-amber-300/80">⏳ Awaiting admin approval.</p>
+                )}
+                {blog.status === "rejected" && blog.rejectionNote && (
+                  <p className="text-xs text-red-400/80">✗ Rejected: {blog.rejectionNote}</p>
                 )}
 
                 {/* Actions */}
-                <div className="flex items-center gap-2 pt-1 border-t border-white/5">
-                  <Tooltip title={blog.status === "published" ? "Unpublish" : "Publish"}>
-                    <IconButton size="small" onClick={() => togglePublish(blog)}
-                      sx={{ color: blog.status === "published" ? "#86efac" : "rgba(255,255,255,0.4)" }}>
-                      <Globe size={14} />
-                    </IconButton>
-                  </Tooltip>
+                <div className="flex items-center gap-2 pt-1 border-t border-white/5 flex-wrap">
+                  {["draft", "rejected"].includes(blog.status) && (
+                    <Tooltip title="Submit for Admin Review">
+                      <IconButton size="small" onClick={() => handleSubmitForReview(blog._id)}
+                        disabled={submitting === blog._id}
+                        sx={{ color: "#fbbf24" }}>
+                        {submitting === blog._id
+                          ? <CircularProgress size={12} sx={{ color: "#fbbf24" }} />
+                          : <Send size={14} />}
+                      </IconButton>
+                    </Tooltip>
+                  )}
+                  {blog.status === "published" && (
+                    <Tooltip title="Unpublish (back to draft)">
+                      <IconButton size="small" onClick={() => togglePublish(blog)}
+                        sx={{ color: "#86efac" }}>
+                        <Globe size={14} />
+                      </IconButton>
+                    </Tooltip>
+                  )}
                   <Tooltip title="Edit">
                     <IconButton size="small" onClick={() => openEdit(blog)}
+                      disabled={blog.status === "pending"}
                       sx={{ color: "rgba(255,255,255,0.6)" }}>
                       <Edit size={14} />
                     </IconButton>
@@ -392,9 +437,23 @@ export default function TeacherBlogs() {
                 value={form.shortDescription} onChange={handleChange}
                 multiline rows={2} fullWidth sx={inputSx} />
 
-              <TextField label="Featured Image URL" name="featuredImage"
-                value={form.featuredImage} onChange={handleChange} fullWidth sx={inputSx}
-                helperText={<span style={{ color: "rgba(255,255,255,0.3)", fontSize: 11 }}>Paste any image URL (e.g. from Unsplash)</span>} />
+              <div className="flex gap-2 items-start">
+                <TextField label="Featured Image URL" name="featuredImage"
+                  value={form.featuredImage} onChange={handleChange} fullWidth sx={inputSx}
+                  helperText={<span style={{ color: "rgba(255,255,255,0.3)", fontSize: 11 }}>Paste a URL or upload below</span>} />
+                <Tooltip title="Upload cover image">
+                  <IconButton component="label" disabled={coverUploading}
+                    sx={{ mt: 1, color: coverUploading ? "#22c55e" : "rgba(255,255,255,0.5)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 2 }}>
+                    {coverUploading ? <CircularProgress size={18} sx={{ color: "#22c55e" }} /> : <ImagePlus size={18} />}
+                    <input hidden type="file" accept="image/jpeg,image/png,image/webp" onChange={handleCoverUpload} />
+                  </IconButton>
+                </Tooltip>
+              </div>
+              {form.featuredImage && (
+                <img src={form.featuredImage} alt="Cover preview"
+                  className="w-full h-28 object-cover rounded-xl"
+                  onError={(e) => { e.target.style.display = "none"; }} />
+              )}
 
               <TextField label="Tags (comma-separated)" name="tags"
                 value={form.tags} onChange={handleChange} fullWidth sx={inputSx}
@@ -404,9 +463,9 @@ export default function TeacherBlogs() {
                 <InputLabel>Status</InputLabel>
                 <Select name="status" value={form.status} onChange={handleChange} label="Status">
                   <MenuItem value="draft">Draft</MenuItem>
-                  <MenuItem value="published">Published</MenuItem>
                 </Select>
               </FormControl>
+              <p className="text-xs text-white/30">Save as draft, then use "Submit for Review" to send to admin for approval.</p>
 
             </div>
           )}
@@ -481,19 +540,9 @@ export default function TeacherBlogs() {
             sx={{ color: "rgba(255,255,255,0.5)", borderRadius: 2, border: "1px solid rgba(255,255,255,0.1)" }}>
             Cancel
           </Button>
-          <Button onClick={() => {
-            setForm((f) => ({ ...f, status: "draft" }));
-            setTimeout(handleSave, 0);
-          }} disabled={saving}
-            sx={{ color: "#94a3b8", bgcolor: "rgba(148,163,184,0.1)", borderRadius: 2, fontWeight: 600 }}>
-            Save Draft
-          </Button>
-          <Button onClick={() => {
-            setForm((f) => ({ ...f, status: "published" }));
-            setTimeout(handleSave, 0);
-          }} disabled={saving}
+          <Button onClick={handleSave} disabled={saving}
             className="bg-green-600! hover:bg-orange-500! text-white! rounded-lg! font-semibold!">
-            {saving ? <CircularProgress size={16} sx={{ color: "white" }} /> : "Publish"}
+            {saving ? <CircularProgress size={16} sx={{ color: "white" }} /> : (editing ? "Save Changes" : "Save Draft")}
           </Button>
         </DialogActions>
       </Dialog>

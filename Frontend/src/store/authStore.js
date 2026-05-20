@@ -16,7 +16,9 @@ const useAuthStore = create(
       hydrated: false,
 
       setHydrated: (value) => {
-        set({ hydrated: value });
+        // When persist rehydration completes, auth state is known from localStorage.
+        // Resolving authLoading and sessionChecked prevents ProtectedRoute from hanging.
+        set({ hydrated: value, authLoading: false, sessionChecked: true });
       },
 
       setSession: (user, accessToken) => {

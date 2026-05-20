@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Chip, Skeleton } from "@mui/material";
-import { Calendar, Clock, ExternalLink, User, Video } from "lucide-react";
+import { Calendar, CheckCircle2, Clock, ExternalLink, User, Video } from "lucide-react";
 import toast from "react-hot-toast";
 import studentApi from "../../services/studentApi";
 
@@ -15,6 +15,21 @@ const STATUS_CHIP = {
 
 const ClassCard = ({ cls, i }) => {
   const sc = STATUS_CHIP[cls.status] || STATUS_CHIP.scheduled;
+  const [joining, setJoining] = useState(false);
+
+  const handleJoin = async () => {
+    if (!cls.meetingLink) { toast.error("Meeting link not available yet"); return; }
+    try {
+      setJoining(true);
+      await studentApi.joinLiveClass(cls._id);
+      window.open(cls.meetingLink, "_blank", "noopener,noreferrer");
+    } catch (err) {
+      toast.error(err?.response?.data?.message || "Failed to join");
+    } finally {
+      setJoining(false);
+    }
+  };
+
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
       className={`rounded-[20px] ${glass} p-5`}>
@@ -53,11 +68,17 @@ const ClassCard = ({ cls, i }) => {
           </div>
         )}
       </div>
-      {cls.meetingLink && (cls.status === "live" || cls.status === "scheduled") && (
-        <a href={cls.meetingLink} target="_blank" rel="noreferrer"
-          className={`mt-3 flex items-center justify-center gap-2 rounded-xl py-2 text-sm font-semibold transition ${cls.status === "live" ? "bg-red-500/20 text-red-300 hover:bg-red-500/30" : "bg-sky-500/20 text-sky-300 hover:bg-sky-500/30"}`}>
+      {(cls.status === "live" || cls.status === "scheduled") && (
+        <button onClick={handleJoin} disabled={joining || !cls.meetingLink}
+          className={`mt-3 flex w-full items-center justify-center gap-2 rounded-xl py-2 text-sm font-semibold transition disabled:opacity-50 ${cls.status === "live" ? "bg-red-500/20 text-red-300 hover:bg-red-500/30" : "bg-sky-500/20 text-sky-300 hover:bg-sky-500/30"}`}>
           <ExternalLink size={14} />
-          {cls.status === "live" ? "Join Now" : "View Class"}
+          {joining ? "Joining…" : cls.status === "live" ? "Join Now" : cls.meetingLink ? "Open Class" : "Link coming soon"}
+        </button>
+      )}
+      {cls.status === "ended" && cls.recordingUrl && (
+        <a href={cls.recordingUrl} target="_blank" rel="noreferrer"
+          className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-violet-500/15 py-2 text-sm font-semibold text-violet-300 hover:bg-violet-500/25 transition">
+          <Video size={14} /> Watch Recording
         </a>
       )}
     </motion.div>
@@ -67,12 +88,19 @@ const ClassCard = ({ cls, i }) => {
 const UpcomingLiveClasses = () => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [history, setHistory] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(true);
 
   useEffect(() => {
     studentApi.getUpcomingLiveClasses()
       .then(({ data: res }) => setData(res))
       .catch(() => toast.error("Failed to load live classes"))
       .finally(() => setLoading(false));
+
+    studentApi.getAttendanceHistory()
+      .then(({ data: res }) => setHistory(res.records || []))
+      .catch(() => {})
+      .finally(() => setHistoryLoading(false));
   }, []);
 
   return (
@@ -144,6 +172,53 @@ const UpcomingLiveClasses = () => {
           )}
         </>
       )}
+
+      {/* Attendance History */}
+      <div className={`rounded-[24px] ${glass} p-6`}>
+        <div className="mb-4 flex items-center gap-2">
+          <CheckCircle2 size={16} className="text-emerald-400" />
+          <p className="font-semibold">My Attendance History</p>
+        </div>
+        {historyLoading ? (
+          <div className="space-y-2">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <Skeleton key={i} variant="rounded" height={52} sx={{ bgcolor: "rgba(255,255,255,0.06)", borderRadius: 2 }} />
+            ))}
+          </div>
+        ) : history.length === 0 ? (
+          <p className="py-6 text-center text-sm text-white/40">No attended sessions yet</p>
+        ) : (
+          <div className="space-y-2">
+            {history.map((r, i) => (
+              <motion.div key={r._id || i} initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: i * 0.03 }}
+                className="flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2.5">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className={`grid h-7 w-7 shrink-0 place-items-center rounded-lg text-xs font-bold
+                    ${r.status === "present" ? "bg-emerald-500/20 text-emerald-300" : r.status === "late" ? "bg-amber-500/20 text-amber-300" : "bg-red-500/20 text-red-300"}`}>
+                    {r.status === "present" ? "✓" : r.status === "late" ? "~" : "✗"}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium">{r.session?.title || "Session"}</p>
+                    <p className="text-xs text-white/40">{r.course?.title || ""}</p>
+                  </div>
+                </div>
+                <div className="shrink-0 text-right">
+                  <Chip label={r.status} size="small"
+                    sx={{
+                      bgcolor: r.status === "present" ? "rgba(34,197,94,0.15)" : r.status === "late" ? "rgba(251,191,36,0.15)" : "rgba(239,68,68,0.15)",
+                      color: r.status === "present" ? "#86efac" : r.status === "late" ? "#fde68a" : "#fca5a5",
+                      fontWeight: 700, fontSize: 10,
+                    }} />
+                  <p className="mt-0.5 text-xs text-white/30">
+                    {r.session?.scheduledAt ? new Date(r.session.scheduledAt).toLocaleDateString() : ""}
+                  </p>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 };

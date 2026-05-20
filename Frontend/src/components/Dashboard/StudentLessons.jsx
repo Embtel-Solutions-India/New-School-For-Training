@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Button, CircularProgress, LinearProgress, Skeleton } from "@mui/material";
-import { BookOpen, CheckCircle2, Circle, ExternalLink, FileText, PlayCircle } from "lucide-react";
+import { BookOpen, CheckCircle2, Circle, FileText, PlayCircle, X } from "lucide-react";
 import toast from "react-hot-toast";
 import studentApi from "../../services/studentApi";
+import LessonVideoPlayer from "../lesson/LessonVideoPlayer";
 
 const glass = "border border-white/10 bg-white/[0.07] shadow-[0_24px_90px_rgba(0,0,0,0.32)] backdrop-blur-2xl";
 
@@ -14,6 +15,7 @@ const StudentLessons = () => {
   const [loadingCourses, setLoadingCourses] = useState(true);
   const [loadingLessons, setLoadingLessons] = useState(false);
   const [completing, setCompleting] = useState(null);
+  const [activeLesson, setActiveLesson] = useState(null);
 
   useEffect(() => {
     studentApi.getEnrolledCourses({ limit: 50 })
@@ -28,6 +30,7 @@ const StudentLessons = () => {
 
   const fetchLessons = useCallback(async () => {
     if (!selectedCourse?._id) return;
+    setActiveLesson(null);
     try {
       setLoadingLessons(true);
       const { data } = await studentApi.getCourseLessons(selectedCourse._id);
@@ -55,6 +58,22 @@ const StudentLessons = () => {
     } catch { toast.error("Failed to mark lesson"); }
     finally { setCompleting(null); }
   };
+
+  // Called by LessonVideoPlayer when 80% watched
+  const handleVideoComplete = useCallback((lessonId) => {
+    setLessonData((prev) => {
+      if (!prev) return prev;
+      const alreadyDone = prev.lessons.find((l) => l._id === lessonId)?.isCompleted;
+      if (alreadyDone) return prev;
+      toast.success("Lesson completed!");
+      const updatedLessons = prev.lessons.map((l) =>
+        l._id === lessonId ? { ...l, isCompleted: true } : l
+      );
+      const completedCount = updatedLessons.filter((l) => l.isCompleted).length;
+      const progress = prev.totalLessons > 0 ? Math.round((completedCount / prev.totalLessons) * 100) : 0;
+      return { ...prev, lessons: updatedLessons, completedCount, progress };
+    });
+  }, []);
 
   // Group lessons by chapter
   const chapters = lessonData ? [...new Set((lessonData.lessons || []).map((l) => l.chapter || "General"))].reduce((acc, ch) => {
@@ -105,6 +124,32 @@ const StudentLessons = () => {
             </div>
           ) : (
             <>
+              {/* Inline video player */}
+              {activeLesson?.videoUrl && (
+                <motion.div
+                  key={activeLesson._id}
+                  initial={{ opacity: 0, y: -8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="mb-5"
+                >
+                  <div className="mb-2 flex items-center justify-between">
+                    <p className="text-sm font-semibold text-white/80 truncate pr-4">{activeLesson.title}</p>
+                    <button
+                      onClick={() => setActiveLesson(null)}
+                      className="shrink-0 rounded-lg p-1 text-white/40 hover:bg-white/10 hover:text-white transition"
+                      title="Close player"
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+                  <LessonVideoPlayer
+                    lesson={activeLesson}
+                    courseId={selectedCourse._id}
+                    onComplete={handleVideoComplete}
+                  />
+                </motion.div>
+              )}
+
               {lessonData && (
                 <div className="mb-5">
                   <div className="flex items-center justify-between mb-2 text-sm">
@@ -142,10 +187,12 @@ const StudentLessons = () => {
                                 {lesson.description && <p className="mt-0.5 text-xs text-white/40 line-clamp-1">{lesson.description}</p>}
                                 <div className="mt-2 flex flex-wrap gap-2">
                                   {lesson.videoUrl && (
-                                    <a href={lesson.videoUrl} target="_blank" rel="noreferrer"
-                                      className="flex items-center gap-1 text-xs text-sky-400 hover:text-sky-300">
-                                      <PlayCircle size={12} /> Watch Video
-                                    </a>
+                                    <button
+                                      onClick={() => setActiveLesson(activeLesson?._id === lesson._id ? null : lesson)}
+                                      className={`flex items-center gap-1 text-xs transition ${activeLesson?._id === lesson._id ? "text-sky-300 font-semibold" : "text-sky-400 hover:text-sky-300"}`}
+                                    >
+                                      <PlayCircle size={12} /> {activeLesson?._id === lesson._id ? "Now Playing" : "Watch Video"}
+                                    </button>
                                   )}
                                   {(lesson.resources || []).map((r) => (
                                     <a key={r._id} href={r.url} target="_blank" rel="noreferrer"

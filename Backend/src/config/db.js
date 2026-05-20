@@ -10,7 +10,7 @@ const connectDB = async () => {
   mongoose.set("strictQuery", true);
 
   const connection = await mongoose.connect(mongoUri);
-  console.log(`MongoDB connected: ${connection.connection.host}`);
+  console.log(`✓ Mongo connected  (${connection.connection.host})`);
 };
 
 export default connectDB;

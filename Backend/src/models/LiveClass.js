@@ -4,12 +4,14 @@ const liveClassSchema = new mongoose.Schema(
   {
     teacher: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, index: true },
     course: { type: mongoose.Schema.Types.ObjectId, ref: "Course", index: true },
+    lessonId: { type: mongoose.Schema.Types.ObjectId, default: null },
     title: { type: String, required: true, trim: true, maxlength: 200 },
     description: { type: String, trim: true, default: "" },
     scheduledAt: { type: Date, required: true, index: true },
     durationMinutes: { type: Number, default: 60 },
     meetingLink: { type: String, trim: true, default: "" },
     meetingId: { type: String, trim: true, default: "" },
+    googleEventId: { type: String, trim: true, default: "" },
     status: {
       type: String,
       enum: ["scheduled", "live", "ended", "cancelled"],
@@ -18,6 +20,7 @@ const liveClassSchema = new mongoose.Schema(
     },
     startedAt: Date,
     endedAt: Date,
+    cancelledAt: Date,
     recordingUrl: { type: String, trim: true, default: "" },
     attendanceCount: { type: Number, default: 0 },
     notifiedStudents: { type: Boolean, default: false },

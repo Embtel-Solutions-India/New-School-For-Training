@@ -13,6 +13,8 @@ import teacherRoutes from "./routes/teacherRoutes.js";
 import studentRoutes from "./routes/studentRoutes.js";
 import blogRoutes from "./routes/blogRoutes.js";
 import uploadRoutes from "./routes/uploadRoutes.js";
+import checkoutRoutes from "./routes/checkoutRoutes.js";
+import lessonRoutes from "./routes/lessonRoutes.js";
 import configurePassport from "./config/passport.js";
 import { authLimiter } from "./middleware/rateLimiter.js";
 import { errorHandler, notFound } from "./middleware/errorMiddleware.js";
@@ -29,6 +31,10 @@ const allowedOrigins = [
 
 app.set("trust proxy", 1);
 app.use(helmet());
+
+// Stripe webhook needs raw body BEFORE the global JSON parser
+app.use("/api/checkout/webhook/stripe", express.raw({ type: "application/json" }));
+
 app.use(
   cors({
     origin(origin, callback) {
@@ -62,6 +68,8 @@ app.use("/api/teacher", teacherRoutes);
 app.use("/api/student", studentRoutes);
 app.use("/api/blogs", blogRoutes);
 app.use("/api/upload", uploadRoutes);
+app.use("/api/checkout", checkoutRoutes);
+app.use("/api/lesson", lessonRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

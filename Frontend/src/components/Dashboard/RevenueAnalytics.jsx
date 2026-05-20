@@ -75,7 +75,7 @@ const ChartCard = ({ title, subtitle, loading, height = 300, children }) => (
     {loading ? (
       <Skeleton variant="rounded" height={height} sx={{ bgcolor: "rgba(255,255,255,0.06)", borderRadius: 3 }} />
     ) : (
-      <div style={{ height }}>{children}</div>
+      <div style={{ height }} className="w-full min-w-0">{children}</div>
     )}
   </div>
 );

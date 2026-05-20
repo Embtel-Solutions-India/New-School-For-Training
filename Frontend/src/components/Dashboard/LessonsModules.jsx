@@ -239,7 +239,7 @@ const LessonsModules = () => {
 
       {/* Lesson Dialog */}
       <Dialog open={dialog} onClose={() => setDialog(false)} maxWidth="md" fullWidth
-        PaperProps={{ sx: { bgcolor: "#0b1220", color: "white", borderRadius: 5, border: "1px solid rgba(255,255,255,0.1)" } }}>
+        slotProps={{ paper: { sx: { bgcolor: "#0b1220", color: "white", borderRadius: 5, border: "1px solid rgba(255,255,255,0.1)" } } }}>
         <DialogTitle sx={{ fontWeight: 700 }}>{editingLesson ? "Edit Lesson" : "Add Lesson"}</DialogTitle>
         <DialogContent>
           <div className="mt-2 space-y-5">

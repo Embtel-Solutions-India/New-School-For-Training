@@ -107,7 +107,6 @@ const userSchema = new mongoose.Schema(
       unique: true,
       lowercase: true,
       trim: true,
-      index: true,
     },
     firstLogin: {
       type: Boolean,
@@ -132,9 +131,6 @@ const userSchema = new mongoose.Schema(
     },
   }
 );
-
-userSchema.index({ email: 1 }, { unique: true });
-userSchema.index({ username: 1 }, { unique: true });
 
 userSchema.pre("validate", function deriveUsername(next) {
   this.role = normalizeRole(this.role);

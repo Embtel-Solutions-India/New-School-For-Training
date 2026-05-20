@@ -76,8 +76,7 @@ API.interceptors.response.use(
       error.response.status === 401 &&
       !originalRequest?._retry &&
       !originalRequest?.skipAuthRefresh &&
-      !isAuthEndpoint(originalRequest?.url) &&
-      Boolean(getAccessToken())
+      !isAuthEndpoint(originalRequest?.url)
     ) {
       originalRequest._retry = true;
 

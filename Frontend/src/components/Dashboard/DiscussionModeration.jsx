@@ -197,7 +197,7 @@ const DiscussionModeration = () => {
 
       {/* Reply Dialog */}
       <Dialog open={!!replyDialog} onClose={() => setReplyDialog(null)} maxWidth="sm" fullWidth
-        PaperProps={{ sx: { bgcolor: "#0b1220", color: "white", borderRadius: 5, border: "1px solid rgba(255,255,255,0.1)" } }}>
+        slotProps={{ paper: { sx: { bgcolor: "#0b1220", color: "white", borderRadius: 5, border: "1px solid rgba(255,255,255,0.1)" } } }}>
         <DialogTitle sx={{ fontWeight: 700 }}>Reply to Discussion</DialogTitle>
         <DialogContent>
           {replyDialog && <p className="mb-4 text-sm text-white/50 italic line-clamp-3">"{replyDialog.content}"</p>}

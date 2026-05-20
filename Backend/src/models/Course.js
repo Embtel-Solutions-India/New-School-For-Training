@@ -25,6 +25,7 @@ const lessonSchema = new mongoose.Schema(
       default: "video",
     },
     videoUrl: { type: String, trim: true, default: "" },
+    videoKey: { type: String, trim: true, default: "" },
     richText: { type: String, default: "" },
     resources: [resourceSchema],
   },

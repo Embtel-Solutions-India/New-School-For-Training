@@ -8,10 +8,15 @@ import {
   getEnrolledCourses,
   getCourseLessons,
   markLessonComplete,
+  saveLessonProgress,
+  getLessonProgress,
   getMyCertificates,
   verifyCertificate,
   getLearningProgress,
   getUpcomingLiveClasses,
+  joinLiveClass,
+  leaveLiveClass,
+  getAttendanceHistory,
   getMyAssignments,
   submitAssignment,
   getQuizHistory,
@@ -47,6 +52,8 @@ router.get("/enrolled", ...auth, getEnrolledCourses);
 // ── Lessons
 router.get("/courses/:courseId/lessons", ...auth, getCourseLessons);
 router.post("/courses/:courseId/lessons/:lessonId/complete", ...auth, markLessonComplete);
+router.post("/courses/:courseId/lessons/:lessonId/progress", ...auth, saveLessonProgress);
+router.get("/courses/:courseId/lessons/:lessonId/progress", ...auth, getLessonProgress);
 
 // ── Certificates
 router.get("/certificates", ...auth, getMyCertificates);
@@ -57,6 +64,9 @@ router.get("/progress", ...auth, getLearningProgress);
 
 // ── Live Classes
 router.get("/live", ...auth, getUpcomingLiveClasses);
+router.get("/live/attendance", ...auth, getAttendanceHistory);
+router.post("/live/:id/join", ...auth, joinLiveClass);
+router.post("/live/:id/leave", ...auth, leaveLiveClass);
 
 // ── Assignments
 router.get("/assignments", ...auth, getMyAssignments);

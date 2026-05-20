@@ -63,7 +63,7 @@ const QuizHistory = () => {
       {!loading && chartData.length > 0 && (
         <div className={`rounded-[24px] ${glass} p-6`}>
           <p className="mb-4 font-semibold">Recent Score Trend</p>
-          <div style={{ height: 200 }}>
+          <div style={{ height: 200 }} className="w-full min-w-0">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData}>
                 <CartesianGrid stroke="rgba(255,255,255,0.07)" vertical={false} />

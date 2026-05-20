@@ -7,7 +7,6 @@ const teacherSchema = new mongoose.Schema(
       ref: "User",
       required: [true, "User ID is required"],
       unique: true,
-      index: true,
     },
     expertise: [{
       type: String,
@@ -116,9 +115,5 @@ const teacherSchema = new mongoose.Schema(
     },
   }
 );
-
-teacherSchema.index({ userId: 1 });
-teacherSchema.index({ approvalStatus: 1 });
-teacherSchema.index({ isVerified: 1 });
 
 export default mongoose.model("Teacher", teacherSchema);

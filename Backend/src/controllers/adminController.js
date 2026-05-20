@@ -1,8 +1,12 @@
+import bcrypt from "bcryptjs";
 import User from "../models/User.js";
 import Teacher from "../models/Teacher.js";
 import Course from "../models/Course.js";
 import Enrollment from "../models/Enrollment.js";
 import AuditLog from "../models/AuditLog.js";
+import Blog from "../models/Blog.js";
+import LiveClass from "../models/LiveClass.js";
+import Subscription from "../models/Subscription.js";
 
 const logAction = async (action, req, resource = "", resourceId = null, details = {}) => {
   try {
@@ -29,6 +33,10 @@ export const getAdminDashboardSummary = async (req, res) => {
   try {
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
+    const monthStart = new Date();
+    monthStart.setDate(1);
+    monthStart.setHours(0, 0, 0, 0);
+
     const [
       totalStudents,
       totalTeachers,
@@ -42,6 +50,10 @@ export const getAdminDashboardSummary = async (req, res) => {
       publishedCourses,
       pendingApprovals,
       newUsersThisWeek,
+      publishedBlogs,
+      liveClassesTotal,
+      activeSubscriptions,
+      monthlyRevenueSummary,
     ] = await Promise.all([
       User.countDocuments({ role: "student" }),
       User.countDocuments({ role: "teacher" }),
@@ -65,6 +77,13 @@ export const getAdminDashboardSummary = async (req, res) => {
       Course.countDocuments({ status: "published" }),
       Course.countDocuments({ status: "pending_review" }),
       User.countDocuments({ createdAt: { $gte: sevenDaysAgo } }),
+      Blog.countDocuments({ status: "published" }),
+      LiveClass.countDocuments(),
+      Subscription.countDocuments({ status: "active" }),
+      Enrollment.aggregate([
+        { $match: { "payment.status": "completed", createdAt: { $gte: monthStart } } },
+        { $group: { _id: null, total: { $sum: "$payment.amount" } } },
+      ]),
     ]);
 
     const studentsEnrolled = await Enrollment.distinct("user", {
@@ -72,6 +91,8 @@ export const getAdminDashboardSummary = async (req, res) => {
     }).then((ids) => ids.length);
 
     const totalRevenue = revenueSummary[0]?.total || 0;
+
+    const monthlyRevenue = monthlyRevenueSummary[0]?.total || 0;
 
     const summary = {
       totalStudents,
@@ -81,11 +102,15 @@ export const getAdminDashboardSummary = async (req, res) => {
       publishedCourses,
       pendingApprovals,
       totalRevenue,
+      monthlyRevenue,
       activeUsers,
       suspendedUsers,
       totalUsers,
       totalCourseSales: totalEnrollments,
       newUsersThisWeek,
+      publishedBlogs,
+      liveClassesTotal,
+      activeSubscriptions,
       recentEnrollments: recentEnrollmentsRaw,
       workspace: "Platform administration control",
     };
@@ -434,6 +459,58 @@ export const changeUserRole = async (req, res) => {
     });
 
     res.json({ success: true, message: "User role updated", user });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const deleteUser = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    if (userId === req.user?._id?.toString()) {
+      return res.status(400).json({ success: false, message: "Cannot delete your own account" });
+    }
+    const user = await User.findByIdAndDelete(userId);
+    if (!user) return res.status(404).json({ success: false, message: "User not found" });
+
+    await logAction("USER_DELETED", req, "user", userId, { targetEmail: user.email, targetRole: user.role });
+    res.json({ success: true, message: "User deleted" });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const updateUser = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { name, email } = req.body;
+    const update = {};
+    if (name?.trim()) update.name = name.trim();
+    if (email?.trim()) update.email = email.trim().toLowerCase();
+
+    const user = await User.findByIdAndUpdate(userId, update, { new: true }).select("-password -refreshToken");
+    if (!user) return res.status(404).json({ success: false, message: "User not found" });
+
+    await logAction("USER_UPDATED", req, "user", userId, { fields: Object.keys(update) });
+    res.json({ success: true, user });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const resetUserPassword = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { newPassword } = req.body;
+    if (!newPassword || newPassword.length < 6) {
+      return res.status(400).json({ success: false, message: "Password must be at least 6 characters" });
+    }
+    const hashed = await bcrypt.hash(newPassword, 10);
+    const user = await User.findByIdAndUpdate(userId, { password: hashed }, { new: true }).select("-password -refreshToken");
+    if (!user) return res.status(404).json({ success: false, message: "User not found" });
+
+    await logAction("USER_PASSWORD_RESET", req, "user", userId, { targetEmail: user.email });
+    res.json({ success: true, message: "Password reset successfully" });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

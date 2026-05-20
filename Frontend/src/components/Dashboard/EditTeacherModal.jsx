@@ -104,7 +104,7 @@ const EditTeacherModal = ({ open, onClose, teacher, onSuccess }) => {
   if (!teacher) return null;
 
   return (
-    <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth PaperProps={{ className: "!bg-[#0b1220] !text-white !rounded-3xl" }}>
+    <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth slotProps={{ paper: { className: "!bg-[#0b1220] !text-white !rounded-3xl" } }}>
       <DialogTitle className="!text-white !font-bold">Edit Teacher</DialogTitle>
 
       <Box sx={{ borderBottom: 1, borderColor: "rgba(255,255,255,0.1)" }}>

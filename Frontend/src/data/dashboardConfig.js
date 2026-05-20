@@ -92,6 +92,7 @@ export const roleMenus = {
     { label: "Coupon Management", icon: Tag, section: "coupons" },
     { label: "Broadcast Notifications", icon: Bell, section: "notifications" },
     { label: "CMS Management", icon: PanelTop, section: "cms" },
+    { label: "Blog Moderation", icon: Newspaper, section: "blogs" },
     { label: "Audit Logs", icon: FileText, section: "audit-logs" },
     { label: "Site Settings", icon: Settings, section: "settings" },
   ],

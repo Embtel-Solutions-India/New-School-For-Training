@@ -5,12 +5,15 @@ import { allowRoles } from "../middleware/rbacMiddleware.js";
 // Controllers
 import { getTeacherOverview } from "../controllers/teacherDashboardController.js";
 import {
-  getLiveClasses, createLiveClass, updateLiveClass, deleteLiveClass,
-  startLiveClass, endLiveClass, getSessionAttendance, markAttendance, getAttendanceReport,
+  getLiveClasses, getLiveClassById, createLiveClass, updateLiveClass, deleteLiveClass,
+  cancelLiveClass, startLiveClass, endLiveClass,
+  getSessionAttendance, markAttendance, getAttendanceReport,
+  attachRecording, getRecordings,
 } from "../controllers/liveClassController.js";
 import { getTeacherReviews, replyToReview, deleteReviewReply } from "../controllers/reviewController.js";
 import {
   getTeacherBlogs, createBlog, updateBlog, deleteBlog,
+  submitForReview, getBlogAnalytics,
 } from "../controllers/blogController.js";
 import {
   getCourseDiscussions, replyToDiscussion, pinDiscussion, deleteDiscussion,
@@ -111,13 +114,17 @@ router.delete("/courses/:courseId/assignments/:assignmentId", ...auth, async (re
 // ── Live Classes
 router.get("/live", ...auth, getLiveClasses);
 router.post("/live", ...auth, createLiveClass);
+router.get("/live/:id", ...auth, getLiveClassById);
 router.patch("/live/:id", ...auth, updateLiveClass);
 router.delete("/live/:id", ...auth, deleteLiveClass);
+router.patch("/live/:id/cancel", ...auth, cancelLiveClass);
 router.patch("/live/:id/start", ...auth, startLiveClass);
 router.patch("/live/:id/end", ...auth, endLiveClass);
 router.get("/live/:id/attendance", ...auth, getSessionAttendance);
 router.post("/live/:id/attendance", ...auth, markAttendance);
 router.get("/attendance/report", ...auth, getAttendanceReport);
+router.post("/live/:id/recording", ...auth, attachRecording);
+router.get("/live/:id/recordings", ...auth, getRecordings);
 
 // ── Notifications
 router.post("/notifications", ...auth, sendNotification);
@@ -150,8 +157,10 @@ router.get("/analytics/content", ...auth, getContentAnalytics);
 
 // ── Blogs
 router.get("/blogs", ...auth, getTeacherBlogs);
+router.get("/blogs/analytics", ...auth, getBlogAnalytics);
 router.post("/blogs", ...auth, createBlog);
 router.put("/blogs/:id", ...auth, updateBlog);
 router.delete("/blogs/:id", ...auth, deleteBlog);
+router.post("/blogs/:id/submit", ...auth, submitForReview);
 
 export default router;

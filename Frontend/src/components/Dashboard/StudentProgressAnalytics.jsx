@@ -100,7 +100,7 @@ const StudentProgressAnalytics = () => {
         <div className={`rounded-[24px] ${glass} p-6`}>
           <p className="mb-4 font-semibold">Progress Distribution</p>
           {loading ? <Skeleton variant="rounded" height={220} sx={{ bgcolor: "rgba(255,255,255,0.06)", borderRadius: 3 }} /> : (
-            <div style={{ height: 220 }}>
+            <div style={{ height: 220 }} className="w-full min-w-0">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={analytics?.progressBuckets || []}>
                   <CartesianGrid stroke="rgba(255,255,255,0.07)" vertical={false} />

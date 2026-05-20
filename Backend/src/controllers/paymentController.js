@@ -1,5 +1,7 @@
 import Course from "../models/Course.js";
 import PaymentSetting from "../models/PaymentSetting.js";
+import Transaction from "../models/Transaction.js";
+import Order from "../models/Order.js";
 import asyncHandler from "../utils/asyncHandler.js";
 
 const getSettingsDocument = () =>
@@ -35,26 +37,40 @@ export const updatePaymentSettings = asyncHandler(async (req, res) => {
 });
 
 export const getFinancialDashboard = asyncHandler(async (_req, res) => {
-  const [courseCount, paidCourses] = await Promise.all([
+  const [courseCount, paidCourses, transactions, recentOrders] = await Promise.all([
     Course.countDocuments(),
     Course.find({ "pricing.price": { $gt: 0 } }).select("title pricing status teacher").limit(20),
+    Transaction.find({ status: "success" })
+      .populate("course", "title")
+      .sort({ createdAt: -1 })
+      .limit(20)
+      .lean(),
+    Order.find({ orderStatus: "paid" })
+      .populate("course", "title")
+      .sort({ createdAt: -1 })
+      .limit(10)
+      .lean(),
   ]);
 
-  const estimatedRevenue = paidCourses.reduce((total, course) => total + (course.pricing?.price || 0), 0);
+  const totalRevenue = transactions.reduce((sum, t) => sum + (t.amount / 100), 0);
 
   res.status(200).json({
     success: true,
     analytics: {
       courseCount,
       paidCourseCount: paidCourses.length,
-      estimatedRevenue,
-      transactions: [
-        { id: "TXN-1001", amount: 2499, status: "paid", gateway: "Razorpay" },
-        { id: "TXN-1002", amount: 999, status: "refund_review", gateway: "Stripe" },
-      ],
-      teacherPayouts: [
-        { teacher: "Teacher payout placeholder", amount: 18000, status: "scheduled" },
-      ],
+      totalRevenue,
+      transactionCount: transactions.length,
+      transactions: transactions.map((t) => ({
+        id: t._id,
+        amount: t.amount / 100,
+        currency: t.currency,
+        status: t.status,
+        gateway: t.gateway,
+        course: t.course?.title || "",
+        createdAt: t.createdAt,
+      })),
+      recentOrders,
     },
   });
 });

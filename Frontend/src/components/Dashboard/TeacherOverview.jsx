@@ -125,7 +125,7 @@ const TeacherOverview = () => {
           {loading ? (
             <Skeleton variant="rounded" height={260} sx={{ bgcolor: "rgba(255,255,255,0.06)", borderRadius: 3 }} />
           ) : (
-            <div style={{ height: 260 }}>
+            <div style={{ height: 260 }} className="w-full min-w-0">
               <ResponsiveContainer width="100%" height="100%">
                 <ComposedChart data={data?.revenueChart || []}>
                   <defs>

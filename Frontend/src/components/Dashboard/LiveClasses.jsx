@@ -4,7 +4,7 @@ import {
   Button, Chip, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle,
   FormControl, IconButton, InputLabel, MenuItem, Pagination, Select, Skeleton, TextField, Tooltip,
 } from "@mui/material";
-import { Calendar, Edit, Plus, Radio, Square, Trash2, Users, Video } from "lucide-react";
+import { Ban, Calendar, Edit, Film, Plus, Radio, Square, Trash2, Users, Video } from "lucide-react";
 import toast from "react-hot-toast";
 import teacherApi from "../../services/teacherApi";
 
@@ -18,6 +18,7 @@ const STATUS = {
 };
 
 const EMPTY = { title: "", description: "", scheduledAt: "", durationMinutes: 60, meetingLink: "", courseId: "" };
+const REC_EMPTY = { url: "", title: "", platform: "other", durationMinutes: 0 };
 
 const LiveClasses = () => {
   const [classes, setClasses] = useState([]);
@@ -32,6 +33,9 @@ const LiveClasses = () => {
   const [saving, setSaving] = useState(false);
   const [attendanceDialog, setAttendanceDialog] = useState(null);
   const [attendance, setAttendance] = useState([]);
+  const [recordingDialog, setRecordingDialog] = useState(null);
+  const [recForm, setRecForm] = useState(REC_EMPTY);
+  const [recSaving, setRecSaving] = useState(false);
 
   const fetchClasses = useCallback(async () => {
     try {
@@ -110,12 +114,41 @@ const LiveClasses = () => {
     } catch { toast.error("Delete failed"); }
   };
 
+  const handleCancel = async (cls) => {
+    if (!window.confirm(`Cancel "${cls.title}"? Students will be notified.`)) return;
+    try {
+      await teacherApi.cancelLiveClass(cls._id);
+      toast.success("Class cancelled");
+      fetchClasses();
+    } catch (err) { toast.error(err?.response?.data?.message || "Cancel failed"); }
+  };
+
   const openAttendance = async (cls) => {
     try {
       const { data } = await teacherApi.getSessionAttendance(cls._id);
       setAttendance(data.attendance || []);
       setAttendanceDialog(cls);
     } catch { toast.error("Failed to load attendance"); }
+  };
+
+  const openRecording = (cls) => {
+    setRecForm({ ...REC_EMPTY, title: cls.title });
+    setRecordingDialog(cls);
+  };
+
+  const handleSaveRecording = async () => {
+    if (!recForm.url.trim()) { toast.error("Recording URL required"); return; }
+    try {
+      setRecSaving(true);
+      await teacherApi.attachRecording(recordingDialog._id, recForm);
+      toast.success("Recording attached");
+      setRecordingDialog(null);
+      fetchClasses();
+    } catch (err) {
+      toast.error(err?.response?.data?.message || "Failed to attach recording");
+    } finally {
+      setRecSaving(false);
+    }
   };
 
   const upcoming = classes.filter((c) => c.status === "scheduled");
@@ -192,13 +225,18 @@ const LiveClasses = () => {
                   {cls.course?.title && <span className="text-violet-300">{cls.course.title}</span>}
                 </div>
                 {cls.meetingLink && (
-                  <a href={cls.meetingLink} target="_blank" rel="noopener noreferrer"
-                    className="mt-2 inline-block text-xs text-sky-400 underline truncate max-w-full">
-                    {cls.meetingLink}
-                  </a>
+                  <div className="mt-2 flex items-center gap-2">
+                    {cls.meetingLink.includes("meet.google.com") && (
+                      <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-bold text-emerald-300">Google Meet</span>
+                    )}
+                    <a href={cls.meetingLink} target="_blank" rel="noopener noreferrer"
+                      className="text-xs text-sky-400 underline truncate max-w-[220px]">
+                      {cls.meetingLink}
+                    </a>
+                  </div>
                 )}
                 <div className="mt-4 flex items-center justify-between">
-                  <div className="flex gap-1">
+                  <div className="flex gap-1 flex-wrap">
                     {cls.status === "scheduled" && (
                       <Button size="small" variant="contained" onClick={() => handleStart(cls)}
                         sx={{ borderRadius: 2, background: "rgba(239,68,68,0.8)", fontSize: 11, px: 2, py: 0.5 }}>
@@ -216,11 +254,27 @@ const LiveClasses = () => {
                         <Users size={13} />
                       </IconButton>
                     </Tooltip>
-                    <Tooltip title="Edit">
-                      <IconButton size="small" onClick={() => openEdit(cls)} sx={{ color: "rgba(255,255,255,0.5)" }}>
-                        <Edit size={13} />
-                      </IconButton>
-                    </Tooltip>
+                    {cls.status === "ended" && (
+                      <Tooltip title="Attach Recording">
+                        <IconButton size="small" onClick={() => openRecording(cls)} sx={{ color: "rgba(167,139,250,0.7)" }}>
+                          <Film size={13} />
+                        </IconButton>
+                      </Tooltip>
+                    )}
+                    {(cls.status === "scheduled" || cls.status === "live") && (
+                      <Tooltip title="Cancel Class">
+                        <IconButton size="small" onClick={() => handleCancel(cls)} sx={{ color: "rgba(251,191,36,0.7)" }}>
+                          <Ban size={13} />
+                        </IconButton>
+                      </Tooltip>
+                    )}
+                    {cls.status !== "live" && (
+                      <Tooltip title="Edit">
+                        <IconButton size="small" onClick={() => openEdit(cls)} sx={{ color: "rgba(255,255,255,0.5)" }}>
+                          <Edit size={13} />
+                        </IconButton>
+                      </Tooltip>
+                    )}
                     <Tooltip title="Delete">
                       <IconButton size="small" onClick={() => handleDelete(cls)} sx={{ color: "rgba(239,68,68,0.5)" }}>
                         <Trash2 size={13} />
@@ -243,7 +297,7 @@ const LiveClasses = () => {
 
       {/* Schedule Dialog */}
       <Dialog open={dialog} onClose={() => setDialog(false)} maxWidth="sm" fullWidth
-        PaperProps={{ sx: { bgcolor: "#0b1220", color: "white", borderRadius: 5, border: "1px solid rgba(255,255,255,0.1)" } }}>
+        slotProps={{ paper: { sx: { bgcolor: "#0b1220", color: "white", borderRadius: 5, border: "1px solid rgba(255,255,255,0.1)" } } }}>
         <DialogTitle sx={{ fontWeight: 700 }}>{editing ? "Edit Session" : "Schedule Live Class"}</DialogTitle>
         <DialogContent>
           <div className="mt-2 space-y-4">
@@ -279,7 +333,7 @@ const LiveClasses = () => {
 
       {/* Attendance Dialog */}
       <Dialog open={!!attendanceDialog} onClose={() => setAttendanceDialog(null)} maxWidth="sm" fullWidth
-        PaperProps={{ sx: { bgcolor: "#0b1220", color: "white", borderRadius: 5, border: "1px solid rgba(255,255,255,0.1)" } }}>
+        slotProps={{ paper: { sx: { bgcolor: "#0b1220", color: "white", borderRadius: 5, border: "1px solid rgba(255,255,255,0.1)" } } }}>
         <DialogTitle sx={{ fontWeight: 700 }}>Session Attendance — {attendanceDialog?.title}</DialogTitle>
         <DialogContent>
           {attendance.length === 0 ? (
@@ -307,6 +361,44 @@ const LiveClasses = () => {
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 3 }}>
           <Button onClick={() => setAttendanceDialog(null)} sx={{ color: "rgba(255,255,255,0.6)" }}>Close</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Attach Recording Dialog */}
+      <Dialog open={!!recordingDialog} onClose={() => setRecordingDialog(null)} maxWidth="sm" fullWidth
+        slotProps={{ paper: { sx: { bgcolor: "#0b1220", color: "white", borderRadius: 5, border: "1px solid rgba(255,255,255,0.1)" } } }}>
+        <DialogTitle sx={{ fontWeight: 700 }}>Attach Recording — {recordingDialog?.title}</DialogTitle>
+        <DialogContent>
+          <div className="mt-2 space-y-4">
+            <TextField fullWidth label="Recording URL *" value={recForm.url}
+              onChange={(e) => setRecForm((p) => ({ ...p, url: e.target.value }))}
+              placeholder="https://drive.google.com/... or https://youtube.com/..."
+              size="small" InputProps={{ sx: { color: "white" } }} InputLabelProps={{ sx: { color: "rgba(255,255,255,0.6)" } }} />
+            <TextField fullWidth label="Recording Title" value={recForm.title}
+              onChange={(e) => setRecForm((p) => ({ ...p, title: e.target.value }))}
+              size="small" InputProps={{ sx: { color: "white" } }} InputLabelProps={{ sx: { color: "rgba(255,255,255,0.6)" } }} />
+            <div className="grid grid-cols-2 gap-4">
+              <FormControl fullWidth size="small">
+                <InputLabel sx={{ color: "rgba(255,255,255,0.6)" }}>Platform</InputLabel>
+                <Select value={recForm.platform} onChange={(e) => setRecForm((p) => ({ ...p, platform: e.target.value }))} label="Platform" sx={{ color: "white" }}>
+                  <MenuItem value="google_drive">Google Drive</MenuItem>
+                  <MenuItem value="youtube">YouTube</MenuItem>
+                  <MenuItem value="s3">S3 / CDN</MenuItem>
+                  <MenuItem value="other">Other</MenuItem>
+                </Select>
+              </FormControl>
+              <TextField fullWidth label="Duration (min)" type="number" value={recForm.durationMinutes}
+                onChange={(e) => setRecForm((p) => ({ ...p, durationMinutes: parseInt(e.target.value) || 0 }))}
+                size="small" inputProps={{ min: 0 }} InputProps={{ sx: { color: "white" } }} InputLabelProps={{ sx: { color: "rgba(255,255,255,0.6)" } }} />
+            </div>
+          </div>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 3, gap: 1 }}>
+          <Button onClick={() => setRecordingDialog(null)} sx={{ color: "rgba(255,255,255,0.6)" }}>Cancel</Button>
+          <Button onClick={handleSaveRecording} variant="contained" disabled={recSaving}
+            sx={{ borderRadius: 3, background: "linear-gradient(135deg,#a78bfa,#7c3aed)", fontWeight: 700 }}>
+            {recSaving ? <CircularProgress size={18} color="inherit" /> : "Attach"}
+          </Button>
         </DialogActions>
       </Dialog>
     </div>

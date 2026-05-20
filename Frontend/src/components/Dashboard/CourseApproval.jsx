@@ -208,7 +208,7 @@ const CourseApproval = () => {
       </motion.div>
 
       <Dialog open={Boolean(actionDialog)} onClose={() => setActionDialog(null)} maxWidth="sm" fullWidth
-        PaperProps={{ sx: { bgcolor: "#0b1220", color: "white", borderRadius: 5, border: "1px solid rgba(255,255,255,0.1)" } }}>
+        slotProps={{ paper: { sx: { bgcolor: "#0b1220", color: "white", borderRadius: 5, border: "1px solid rgba(255,255,255,0.1)" } } }}>
         {actionDialog && (() => {
           const meta = actionMeta[actionDialog.type];
           const Icon = meta.icon;

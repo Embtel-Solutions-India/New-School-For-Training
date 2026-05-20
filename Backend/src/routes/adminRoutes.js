@@ -8,6 +8,9 @@ import {
   activateUser,
   banUser,
   changeUserRole,
+  deleteUser,
+  updateUser,
+  resetUserPassword,
   getTeachersList,
 } from "../controllers/adminController.js";
 import {
@@ -57,6 +60,9 @@ import {
   getAuditLogStats,
 } from "../controllers/auditLogController.js";
 import { getPlatformAnalytics } from "../controllers/platformAnalyticsController.js";
+import {
+  getPendingBlogs, getAllBlogsAdmin, approveBlog, rejectBlog, adminDeleteBlog,
+} from "../controllers/blogController.js";
 import { authenticate, requireAdmin } from "../middleware/auth.js";
 
 const router = express.Router();
@@ -74,10 +80,13 @@ router.get("/analytics/platform", getPlatformAnalytics);
 
 // ── Users ─────────────────────────────────────────────────────────────────────
 router.get("/users", getUserManagement);
+router.patch("/users/:userId", updateUser);
+router.delete("/users/:userId", deleteUser);
 router.post("/users/:userId/suspend", suspendUser);
 router.post("/users/:userId/activate", activateUser);
 router.post("/users/:userId/ban", banUser);
 router.patch("/users/:userId/role", changeUserRole);
+router.post("/users/:userId/reset-password", resetUserPassword);
 
 // ── Teachers ──────────────────────────────────────────────────────────────────
 router.get("/teachers", getTeachersList);
@@ -121,6 +130,13 @@ router.put("/settings/general", updateGeneralSettings);
 router.put("/settings/payment", updatePaymentSettings);
 router.put("/settings/security", updateSecuritySettings);
 router.put("/settings/maintenance", updateMaintenanceMode);
+
+// ── Blog Moderation ───────────────────────────────────────────────────────────
+router.get("/blogs", getAllBlogsAdmin);
+router.get("/blogs/pending", getPendingBlogs);
+router.post("/blogs/:id/approve", approveBlog);
+router.post("/blogs/:id/reject", rejectBlog);
+router.delete("/blogs/:id", adminDeleteBlog);
 
 // ── Audit Logs ────────────────────────────────────────────────────────────────
 router.get("/audit-logs", getAuditLogs);

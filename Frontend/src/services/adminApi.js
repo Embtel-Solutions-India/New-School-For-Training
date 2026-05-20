@@ -12,10 +12,13 @@ const adminApi = {
   // ── Users ─────────────────────────────────────────────────────────────────────
   getUsers: (page = 1, limit = 10, search = "", role = "", status = "") =>
     api.get("/admin/users", { params: { page, limit, search, role, status } }),
+  updateUser: (userId, data) => api.patch(`/admin/users/${userId}`, data),
+  deleteUser: (userId) => api.delete(`/admin/users/${userId}`),
   suspendUser: (userId, reason = "") => api.post(`/admin/users/${userId}/suspend`, { reason }),
   activateUser: (userId) => api.post(`/admin/users/${userId}/activate`),
   banUser: (userId, reason = "") => api.post(`/admin/users/${userId}/ban`, { reason }),
   changeUserRole: (userId, role) => api.patch(`/admin/users/${userId}/role`, { role }),
+  resetUserPassword: (userId, newPassword) => api.post(`/admin/users/${userId}/reset-password`, { newPassword }),
 
   // ── Teachers ──────────────────────────────────────────────────────────────────
   getTeachers: (page = 1, limit = 10, search = "", status = "") =>
