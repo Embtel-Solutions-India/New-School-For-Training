@@ -30,6 +30,7 @@ const CourseReviews = () => {
   const [replyDialog, setReplyDialog] = useState(null);
   const [reply, setReply] = useState("");
   const [saving, setSaving] = useState(false);
+  const [featuring, setFeaturing] = useState(null);
 
   const fetchReviews = useCallback(async () => {
     try {
@@ -73,6 +74,18 @@ const CourseReviews = () => {
       toast.success("Reply removed");
       fetchReviews();
     } catch { toast.error("Remove failed"); }
+  };
+
+  const handleFeature = async (r) => {
+    setFeaturing(r._id);
+    try {
+      await teacherApi.featureReview(r._id);
+      toast.success(r.isFeatured ? "Removed from featured" : "Review featured! Student notified.");
+      setReviews((prev) =>
+        prev.map((x) => (x._id === r._id ? { ...x, isFeatured: !x.isFeatured } : x))
+      );
+    } catch { toast.error("Failed to update"); }
+    finally { setFeaturing(null); }
   };
 
   return (
@@ -180,14 +193,31 @@ const CourseReviews = () => {
                   </div>
                 </div>
               )}
-              {!r.teacherReply && (
-                <div className="mt-3 flex justify-end">
+              <div className="mt-3 flex items-center justify-between gap-2 flex-wrap">
+                <Button
+                  size="small"
+                  onClick={() => handleFeature(r)}
+                  disabled={featuring === r._id}
+                  startIcon={featuring === r._id
+                    ? <CircularProgress size={11} sx={{ color: r.isFeatured ? "#fbbf24" : "rgba(255,255,255,0.5)" }} />
+                    : <Star size={12} className={r.isFeatured ? "fill-amber-400 text-amber-400" : "text-white/30"} />}
+                  sx={{
+                    fontSize: 11, borderRadius: 2,
+                    color: r.isFeatured ? "#fbbf24" : "rgba(255,255,255,0.45)",
+                    border: `1px solid ${r.isFeatured ? "rgba(251,191,36,0.3)" : "rgba(255,255,255,0.1)"}`,
+                    bgcolor: r.isFeatured ? "rgba(251,191,36,0.08)" : "transparent",
+                    "&:hover": { bgcolor: r.isFeatured ? "rgba(251,191,36,0.15)" : "rgba(255,255,255,0.05)" },
+                  }}
+                >
+                  {r.isFeatured ? "Featured" : "Feature"}
+                </Button>
+                {!r.teacherReply && (
                   <Button size="small" variant="outlined" onClick={() => openReply(r)}
                     sx={{ borderRadius: 2, borderColor: "rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.7)", fontSize: 11 }}>
                     Reply
                   </Button>
-                </div>
-              )}
+                )}
+              </div>
             </motion.div>
           ))}
         </div>

@@ -114,10 +114,9 @@ const courseSchema = new mongoose.Schema(
       default: false,
       index: true,
     },
-    enrollmentCount: {
-      type: Number,
-      default: 0,
-    },
+    enrollmentCount: { type: Number, default: 0 },
+    averageRating: { type: Number, default: 0, min: 0, max: 5 },
+    reviewCount: { type: Number, default: 0 },
     duration: { type: String, trim: true, default: "" },
     estimatedHours: { type: Number, default: 0 },
     skills: [{ type: String, trim: true }],

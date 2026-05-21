@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import DOMPurify from "dompurify";
 import { useNavigate, useParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { CircularProgress, Skeleton } from "@mui/material";
@@ -336,7 +337,7 @@ export default function BlogDetailPage() {
               <style>{BLOG_CONTENT_STYLES}</style>
               <div
                 className="blog-body text-gray-700 text-base"
-                dangerouslySetInnerHTML={{ __html: blog.content || "<p>No content available.</p>" }}
+                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(blog.content || "<p>No content available.</p>") }}
               />
 
               {/* TAGS */}

@@ -16,6 +16,7 @@ import {
   updateCourse,
   updateLesson,
 } from "../controllers/courseController.js";
+import { getPublicCourseReviews, getTopReviews } from "../controllers/reviewController.js";
 import { optionalAuth, protect } from "../middleware/authMiddleware.js";
 import { allowRoles } from "../middleware/rbacMiddleware.js";
 
@@ -23,7 +24,9 @@ const router = express.Router();
 
 router.get("/public", getPublicCourses);
 router.get("/public/categories", getPublicCategories);
+router.get("/public/top-reviews", getTopReviews);
 router.get("/public/:courseId", getPublicCourseById);
+router.get("/public/:courseId/reviews", getPublicCourseReviews);
 
 // Unified GET by ID — public or authenticated (must come before protect middleware)
 router.get("/:courseId", optionalAuth, getCourseById);

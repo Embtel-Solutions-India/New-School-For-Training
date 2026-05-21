@@ -94,6 +94,11 @@ const autofillResume = () => api.post("/resume/autofill");
 const aiEnhanceResume = (data) => api.post("/resume/ai-enhance", { resumeData: data });
 const downloadResumePDF = () => api.get("/resume/download", { responseType: "blob" });
 
+// ── Reviews
+const getMyReviews = () => api.get(`${S}/reviews`);
+const submitReview = (data) => api.post(`${S}/reviews`, data);
+const deleteReview = (id) => api.delete(`${S}/reviews/${id}`);
+
 // ── Profile
 const getProfile = () => api.get(`${S}/profile`);
 const updateProfile = (data) => api.patch(`${S}/profile`, data);
@@ -117,6 +122,7 @@ const studentApi = {
   getDownloads,
   getMyCommunities, getTrendingPosts, getCoursePosts, createCommunityPost,
   getCourseAnnouncements, getPostReplies, replyToPost, likePost, summarizePost,
+  getMyReviews, submitReview, deleteReview,
   getProfile, updateProfile, changePassword, generateAIAvatar, getStudentActivity,
   getJobs, getRecommendedJobs, getJobById, getMyApplications, getSavedJobs, applyJob, toggleSaveJob,
   getMyResume, saveResume, autofillResume, aiEnhanceResume, downloadResumePDF,

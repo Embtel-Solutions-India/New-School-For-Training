@@ -1,12 +1,14 @@
 import { Button } from "@mui/material";
 import { useRef } from "react";
 import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 
 import per from "../../assets/HeroBanner/per1_img.png";
 import per2 from "../../assets/HeroBanner/per2_img.png";
 import per3 from "../../assets/HeroBanner/per3_img.png";
 
 const HeroBanner = () => {
+  const navigate = useNavigate();
   const banners = [
     {
       title: "Build Skills That Actually Matter.",
@@ -171,11 +173,14 @@ const HeroBanner = () => {
                 {/* BUTTONS */}
                 <div className="mt-8 sm:mt-10 flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
 
-                  <Button className="!bg-green-700 hover:!bg-orange-500 hover:!text-black !text-white !rounded-full !px-7 !py-3 !font-semibold !shadow-[0_12px_30px_rgba(22,163,74,0.22)] transition-all duration-300">
+                  <Button
+                    onClick={() => navigate("/courses")}
+                    className="!bg-green-700 hover:!bg-orange-500 hover:!text-black !text-white !rounded-full !px-7 !py-3 !font-semibold !shadow-[0_12px_30px_rgba(22,163,74,0.22)] transition-all duration-300">
                     Explore Programs
                   </Button>
 
                   <Button
+                    onClick={() => navigate("/about")}
                     variant="outlined"
                     className="!border-gray-300 !text-gray-700 hover:!border-orange-500 hover:!text-orange-500 hover:!bg-orange-50 !rounded-full !px-7 !py-3 !font-semibold transition-all duration-300"
                   >

@@ -106,6 +106,7 @@ const Hero = () => {
 
               {/* SECONDARY */}
               <Button
+                onClick={() => navigate("/contact")}
                 onMouseMove={handleMagnet}
                 onMouseLeave={resetMagnet}
                 variant="outlined"

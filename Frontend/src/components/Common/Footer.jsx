@@ -21,10 +21,18 @@ export default function Footer() {
 
             {/* Social Icons */}
             <div className="flex flex-wrap gap-4 mt-6">
-              <Facebook className="hover:text-blue-500 cursor-pointer" />
-              <Twitter className="hover:text-blue-400 cursor-pointer" />
-              <LinkedIn className="hover:text-blue-700 cursor-pointer" />
-              <GitHub className="hover:text-gray-800 cursor-pointer" />
+              <a href="https://www.facebook.com/schoolfortraining" target="_blank" rel="noopener noreferrer" aria-label="Facebook">
+                <Facebook className="hover:text-blue-500 cursor-pointer" />
+              </a>
+              <a href="https://twitter.com/sft_learn" target="_blank" rel="noopener noreferrer" aria-label="Twitter">
+                <Twitter className="hover:text-blue-400 cursor-pointer" />
+              </a>
+              <a href="https://www.linkedin.com/company/schoolfortraining" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn">
+                <LinkedIn className="hover:text-blue-700 cursor-pointer" />
+              </a>
+              <a href="https://github.com/schoolfortraining" target="_blank" rel="noopener noreferrer" aria-label="GitHub">
+                <GitHub className="hover:text-gray-800 cursor-pointer" />
+              </a>
             </div>
           </div>
 

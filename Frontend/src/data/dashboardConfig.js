@@ -69,6 +69,7 @@ export const roleMenus = {
     { label: "Course Communities", icon: MessagesSquare, section: "s-community" },
     { label: "Placement Cell", icon: Briefcase, section: "s-placement" },
     { label: "Profile Settings", icon: UserCog, section: "s-profile" },
+    { label: "My Reviews", icon: Star, section: "s-reviews" },
     { label: "AI Learning Assistant", icon: Bot, section: "s-ai-assistant" },
   ],
   teacher: [

@@ -91,6 +91,9 @@ import StudentAIAssistant from "./StudentAIAssistant";
 import CourseCommunity from "./CourseCommunity";
 import PlacementCell from "./PlacementCell";
 import TeacherJobPostings from "./TeacherJobPostings";
+import StudentReviews from "./StudentReviews";
+import { DashboardThemeProvider, useDashboardTheme } from "../../context/ThemeContext";
+import { ThemeProvider as MuiThemeProvider, createTheme } from "@mui/material/styles";
 
 const sectionTitles = {
   "s-overview": "Dashboard Overview",
@@ -109,6 +112,7 @@ const sectionTitles = {
   "s-community": "Course Communities",
   "s-placement": "Placement Cell",
   "s-profile": "Profile Settings",
+  "s-reviews": "My Reviews",
   "s-ai-assistant": "AI Learning Assistant",
   "t-overview": "Dashboard Overview",
   "t-courses": "Add Courses",
@@ -140,6 +144,18 @@ const sectionTitles = {
 };
 
 const glass = "border border-white/10 bg-white/[0.07] shadow-[0_24px_90px_rgba(0,0,0,0.32)] backdrop-blur-2xl";
+
+const darkMuiTheme = createTheme({
+  palette: { mode: "dark", primary: { main: "#22c55e" }, secondary: { main: "#f97316" },
+             background: { default: "#0b1120", paper: "#111827" } },
+  typography: { fontFamily: "Inter, sans-serif" },
+});
+
+const lightMuiTheme = createTheme({
+  palette: { mode: "light", primary: { main: "#16a34a" }, secondary: { main: "#ea580c" },
+             background: { default: "#f1f5f9", paper: "#ffffff" } },
+  typography: { fontFamily: "Inter, sans-serif" },
+});
 
 const NOTIF_TYPES = {
   success:      { icon: CheckCheck, color: "#22c55e", bg: "rgba(34,197,94,0.15)" },
@@ -204,6 +220,7 @@ const StudentSectionRouter = ({ section }) => {
     "s-community": <CourseCommunity />,
     "s-placement": <PlacementCell />,
     "s-profile": <ProfileSettings />,
+    "s-reviews": <StudentReviews />,
     "s-ai-assistant": <StudentAIAssistant />,
   };
   return map[section] || <StudentOverview />;
@@ -230,12 +247,13 @@ const TeacherSectionRouter = ({ section }) => {
   return map[section] || <TeacherOverview />;
 };
 
-const DashboardShell = () => {
+const DashboardShellInner = () => {
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
   const role = normalizeRole(user?.role);
   const config = roles[role] || roles.student;
+  const { isDark, toggleTheme } = useDashboardTheme();
 
   const [activeSection, setActiveSection] = useState("overview");
   const [collapsed, setCollapsed] = useState(false);
@@ -244,7 +262,6 @@ const DashboardShell = () => {
   const [profileAnchor, setProfileAnchor] = useState(null);
   const [notificationsAnchor, setNotificationsAnchor] = useState(null);
   const [commandOpen, setCommandOpen] = useState(false);
-  const [dark, setDark] = useState(true);
   const [livePopups, setLivePopups] = useState([]);
   const [navNotifs, setNavNotifs] = useState([]);
   const [navUnread, setNavUnread] = useState(0);
@@ -436,10 +453,11 @@ const DashboardShell = () => {
   };
 
   return (
-    <div className={`${dark ? "dark" : ""}`}>
-      <div className="min-h-screen overflow-hidden bg-[#070b14] text-white">
-        <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_12%_8%,rgba(34,197,94,0.22),transparent_34%),radial-gradient(circle_at_86%_14%,rgba(249,115,22,0.2),transparent_30%),linear-gradient(145deg,#070b14_0%,#0e1728_46%,#101827_100%)]" />
-        <div className="pointer-events-none fixed inset-0 bg-[linear-gradient(rgba(255,255,255,0.035)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.035)_1px,transparent_1px)] bg-[size:48px_48px] opacity-30" />
+    <MuiThemeProvider theme={isDark ? darkMuiTheme : lightMuiTheme}>
+    <div className={isDark ? "dark" : "dashboard-light"}>
+      <div className={`min-h-screen overflow-hidden ${isDark ? "bg-[#070b14] text-white" : "bg-slate-100 text-slate-900"}`}>
+        {isDark && <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_12%_8%,rgba(34,197,94,0.22),transparent_34%),radial-gradient(circle_at_86%_14%,rgba(249,115,22,0.2),transparent_30%),linear-gradient(145deg,#070b14_0%,#0e1728_46%,#101827_100%)]" />}
+        {isDark && <div className="pointer-events-none fixed inset-0 bg-[linear-gradient(rgba(255,255,255,0.035)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.035)_1px,transparent_1px)] bg-[size:48px_48px] opacity-30" />}
 
         <DesktopSidebar
           role={role}
@@ -452,7 +470,7 @@ const DashboardShell = () => {
         />
 
         <Drawer open={mobileOpen} onClose={() => setMobileOpen(false)}
-          slotProps={{ paper: { className: "!bg-[#080d18] !text-white !w-[300px]" } }}>
+          slotProps={{ paper: { className: `!w-[300px] ${isDark ? "!bg-[#080d18] !text-white" : "dashboard-light !bg-white !text-slate-900"}` } }}>
           <SidebarContent role={role} activeSection={activeSection} expanded={expanded} collapsed={false} mobile
             onExpand={setExpanded}
             onSelect={(s) => { setActiveSection(s); setMobileOpen(false); }} />
@@ -460,8 +478,8 @@ const DashboardShell = () => {
 
         <main className={`relative z-10 min-h-screen transition-all duration-300 ${collapsed ? "lg:pl-[104px]" : "lg:pl-[292px]"}`}>
           <Topbar
-            user={user} role={role} config={config} section={activeSection} dark={dark}
-            onMobileOpen={() => setMobileOpen(true)} onThemeToggle={() => setDark((v) => !v)}
+            user={user} role={role} config={config} section={activeSection} dark={isDark}
+            onMobileOpen={() => setMobileOpen(true)} onThemeToggle={toggleTheme}
             onCommand={() => setCommandOpen(true)}
             profileAnchor={profileAnchor} notificationsAnchor={notificationsAnchor}
             setProfileAnchor={setProfileAnchor} setNotificationsAnchor={setNotificationsAnchor}
@@ -500,8 +518,15 @@ const DashboardShell = () => {
         )}
       </div>
     </div>
+    </MuiThemeProvider>
   );
 };
+
+const DashboardShell = () => (
+  <DashboardThemeProvider>
+    <DashboardShellInner />
+  </DashboardThemeProvider>
+);
 
 const DesktopSidebar = (props) => (
   <aside className={`fixed inset-y-0 left-0 z-30 hidden p-4 transition-all duration-300 lg:block ${props.collapsed ? "w-[104px]" : "w-[292px]"}`}>
@@ -606,31 +631,34 @@ const Topbar = ({
   const liveCount = (navClasses?.upcoming || []).filter((c) => c.status === "live").length;
   const classBadge = newClassCount + liveCount;
   const notifSection = role === "teacher" ? "t-notifications" : role === "admin" ? "notifications" : "s-notifications";
+  const menuPaperClass = dark
+    ? "!mt-3 !rounded-3xl !bg-[#0b1220] !text-white !border !border-white/10 !overflow-hidden"
+    : "dashboard-light !mt-3 !rounded-3xl !bg-white !text-slate-900 !border !border-slate-200 !overflow-hidden";
 
   return (
-    <header className="fixed left-0 right-0 top-0 z-20 border-b border-white/10 bg-[#070b14]/72 backdrop-blur-2xl lg:left-auto">
+    <header className={`fixed left-0 right-0 top-0 z-20 border-b backdrop-blur-2xl lg:left-auto ${dark ? "border-white/10 bg-[#070b14]/72" : "border-slate-200 bg-white/90 text-slate-900"}`}>
       <div className="flex h-20 items-center gap-3 px-4 sm:px-6 lg:px-8">
-        <IconButton onClick={onMobileOpen} className="!text-white lg:!hidden"><MenuIcon /></IconButton>
+        <IconButton onClick={onMobileOpen} className={`${dark ? "!text-white" : "!text-slate-700"} lg:!hidden`}><MenuIcon /></IconButton>
 
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2 text-xs text-white/45">
+          <div className={`flex items-center gap-2 text-xs ${dark ? "text-white/45" : "text-slate-500"}`}>
             <span>{config.label}</span><ChevronRight size={13} /><span>{sectionTitles[section] || "Workspace"}</span>
           </div>
           <p className="truncate text-base font-semibold sm:text-lg">{sectionTitles[section] || config.title}</p>
         </div>
 
-        <button onClick={onCommand} className="hidden min-w-[280px] items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-3 text-left text-sm text-white/45 transition hover:bg-white/[0.1] md:flex">
+        <button onClick={onCommand} className={`hidden min-w-[280px] items-center gap-3 rounded-2xl border px-4 py-3 text-left text-sm transition md:flex ${dark ? "border-white/10 bg-white/[0.06] text-white/45 hover:bg-white/[0.1]" : "border-slate-200 bg-slate-50 text-slate-500 hover:bg-slate-100"}`}>
           <Search size={17} />Search courses, users, reports...
-          <span className="ml-auto rounded-lg border border-white/10 px-2 py-0.5 text-xs">Ctrl K</span>
+          <span className={`ml-auto rounded-lg border px-2 py-0.5 text-xs ${dark ? "border-white/10" : "border-slate-200 text-slate-500"}`}>Ctrl K</span>
         </button>
 
         <Tooltip title={dark ? "Light theme" : "Dark theme"}>
-          <IconButton onClick={onThemeToggle} className="!text-white/70">{dark ? <Sun size={19} /> : <Moon size={19} />}</IconButton>
+          <IconButton onClick={onThemeToggle} className={dark ? "!text-white/70" : "!text-slate-700"}>{dark ? <Sun size={19} /> : <Moon size={19} />}</IconButton>
         </Tooltip>
 
         {/* Notification bell — real count badge */}
         <Tooltip title="Notifications">
-          <IconButton onClick={(e) => setNotificationsAnchor(e.currentTarget)} className="!text-white/70">
+          <IconButton onClick={(e) => setNotificationsAnchor(e.currentTarget)} className={dark ? "!text-white/70" : "!text-slate-700"}>
             <Badge badgeContent={navUnread > 0 ? navUnread : null} color="error" max={9}>
               <Bell size={19} />
             </Badge>
@@ -640,7 +668,7 @@ const Topbar = ({
         {/* Classes button — students and teachers */}
         {role !== "admin" && (
           <Tooltip title="Classes">
-            <IconButton onClick={onClassDrop} className="!text-white/70">
+            <IconButton onClick={onClassDrop} className={dark ? "!text-white/70" : "!text-slate-700"}>
               <Badge badgeContent={classBadge > 0 ? classBadge : null} color="primary" max={9}>
                 <CalendarClock size={19} />
               </Badge>
@@ -648,7 +676,7 @@ const Topbar = ({
           </Tooltip>
         )}
 
-        <button onClick={(e) => setProfileAnchor(e.currentTarget)} className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.06] p-1.5 pr-2 text-white">
+        <button onClick={(e) => setProfileAnchor(e.currentTarget)} className={`flex items-center gap-2 rounded-2xl border p-1.5 pr-2 ${dark ? "border-white/10 bg-white/[0.06] text-white" : "border-slate-200 bg-slate-50 text-slate-700"}`}>
           <Avatar src={user?.avatar} alt={user?.name} sx={{ width: 34, height: 34 }}>{user?.name?.[0] || "S"}</Avatar>
           <ChevronDown size={15} />
         </button>
@@ -658,7 +686,7 @@ const Topbar = ({
           anchorEl={notificationsAnchor}
           open={Boolean(notificationsAnchor)}
           onClose={() => setNotificationsAnchor(null)}
-          slotProps={{ paper: { className: "!mt-3 !rounded-3xl !bg-[#0b1220] !text-white !border !border-white/10 !w-96 !overflow-hidden", sx: { maxHeight: 520 } } }}
+          slotProps={{ paper: { className: `${menuPaperClass} !w-96`, sx: { maxHeight: 520 } } }}
         >
           <div className="flex items-center justify-between px-4 pt-4 pb-2">
             <p className="text-sm font-semibold">Notifications</p>
@@ -713,7 +741,7 @@ const Topbar = ({
             anchorEl={classDropAnchor}
             open={Boolean(classDropAnchor)}
             onClose={() => setClassDropAnchor(null)}
-            slotProps={{ paper: { className: "!mt-3 !rounded-3xl !bg-[#0b1220] !text-white !border !border-white/10 !w-96 !overflow-hidden", sx: { maxHeight: 520 } } }}
+            slotProps={{ paper: { className: `${menuPaperClass} !w-96`, sx: { maxHeight: 520 } } }}
           >
             <div className="px-4 pt-4 pb-2">
               <p className="text-sm font-semibold">Your Classes</p>
@@ -784,7 +812,7 @@ const Topbar = ({
 
         {/* ── Profile menu ── */}
         <Menu anchorEl={profileAnchor} open={Boolean(profileAnchor)} onClose={() => setProfileAnchor(null)}
-          slotProps={{ paper: { className: "!mt-3 !rounded-3xl !bg-[#0b1220] !text-white !border !border-white/10 !w-72" } }}>
+          slotProps={{ paper: { className: `${menuPaperClass} !w-72` } }}>
           <MenuItem>
             <div><p className="font-semibold">{user?.name}</p><p className="text-xs capitalize text-white/45">{formatRole(role)}</p></div>
           </MenuItem>

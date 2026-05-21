@@ -71,6 +71,7 @@ const getTeacherStudentProfile = (studentId) => api.get(`${T}/students/${student
 const getReviews = (params) => api.get(`${T}/reviews`, { params });
 const replyToReview = (id, reply) => api.patch(`${T}/reviews/${id}/reply`, { reply });
 const deleteReviewReply = (id) => api.delete(`${T}/reviews/${id}/reply`);
+const featureReview = (id) => api.patch(`${T}/reviews/${id}/feature`);
 
 // ── Discussions
 const getDiscussions = (courseId, params) => api.get(`${T}/discussions/${courseId}`, { params });
@@ -118,7 +119,7 @@ const teacherApi = {
   attachRecording, getRecordings,
   sendNotification,
   getStudents, getProgressAnalytics, updateStudentProgress, getTeacherStudentProfile,
-  getReviews, replyToReview, deleteReviewReply,
+  getReviews, replyToReview, deleteReviewReply, featureReview,
   getDiscussions, replyToDiscussion, pinDiscussion, lockDiscussion, deleteDiscussion,
   getCommunityAnnouncements, createAnnouncement, deleteAnnouncement, getPendingQuestions, resolveQuestion,
   getQuestions, createQuestion, updateQuestion, deleteQuestion, getQuestionStats,

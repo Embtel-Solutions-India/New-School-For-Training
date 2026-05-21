@@ -10,7 +10,7 @@ import {
   getSessionAttendance, markAttendance, getAttendanceReport,
   attachRecording, getRecordings,
 } from "../controllers/liveClassController.js";
-import { getTeacherReviews, replyToReview, deleteReviewReply } from "../controllers/reviewController.js";
+import { getTeacherReviews, replyToReview, deleteReviewReply, featureReview } from "../controllers/reviewController.js";
 import {
   getTeacherBlogs, createBlog, updateBlog, deleteBlog,
   submitForReview, getBlogAnalytics,
@@ -152,6 +152,7 @@ router.patch("/students/:enrollmentId/progress", ...auth, updateStudentProgress)
 router.get("/reviews", ...auth, getTeacherReviews);
 router.patch("/reviews/:id/reply", ...auth, replyToReview);
 router.delete("/reviews/:id/reply", ...auth, deleteReviewReply);
+router.patch("/reviews/:id/feature", ...auth, featureReview);
 
 // ── Discussions (moderation)
 router.get("/discussions/:courseId", ...auth, getCourseDiscussions);

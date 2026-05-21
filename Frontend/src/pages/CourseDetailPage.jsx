@@ -9,6 +9,7 @@ import Navbar from "../components/Common/NavBar";
 import Footer from "../components/Common/Footer";
 import useAuthStore from "../store/authStore";
 import { useCourseDetail } from "../hooks/useCourses";
+import CourseReviewsSection from "../components/course/CourseReviewsSection";
 
 const FALLBACK_IMAGE = "/images/Courses1.png";
 
@@ -389,6 +390,9 @@ const CourseDetailPage = () => {
                 </div>
               </Card>
             )}
+
+            {/* ── REVIEWS ── */}
+            <CourseReviewsSection courseId={courseId} user={user} />
 
           </div>
         )}

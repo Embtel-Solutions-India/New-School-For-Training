@@ -1,6 +1,8 @@
 import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 
 export default function CTA() {
+  const navigate = useNavigate();
   return (
     <section className="relative py-12 sm:py-14 px-4 sm:px-6 overflow-hidden bg-white border-b border-gray-200">
 
@@ -89,6 +91,7 @@ export default function CTA() {
 
             {/* PRIMARY BUTTON */}
             <button
+              onClick={() => navigate("/register")}
               className="
               px-7 sm:px-9 py-4
               rounded-2xl
@@ -106,6 +109,7 @@ export default function CTA() {
 
             {/* SECONDARY BUTTON */}
             <button
+              onClick={() => navigate("/contact")}
               className="
               px-7 sm:px-9 py-4
               rounded-2xl

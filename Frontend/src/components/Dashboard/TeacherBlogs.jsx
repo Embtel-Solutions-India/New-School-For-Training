@@ -7,8 +7,10 @@ import {
 } from "@mui/material";
 import { Edit, Eye, FileText, Globe, ImagePlus, Plus, Send, Trash2, X } from "lucide-react";
 import toast from "react-hot-toast";
+import DOMPurify from "dompurify";
 import blogApi from "../../services/blogApi";
 import { requestPresignedUrl, uploadToS3 } from "../../services/uploadService";
+import RichTextEditor from "../blog/RichTextEditor";
 
 const glass = "border border-white/10 bg-white/[0.07] shadow-[0_24px_90px_rgba(0,0,0,0.32)] backdrop-blur-2xl";
 
@@ -38,17 +40,6 @@ const BLOG_CATEGORIES = [
   "Technology", "Certifications", "Student Stories", "Industry Trends",
 ];
 
-const TOOLBAR = [
-  { label: "B", title: "Bold", open: "<strong>", close: "</strong>", cls: "font-bold" },
-  { label: "I", title: "Italic", open: "<em>", close: "</em>", cls: "italic" },
-  { label: "H2", title: "Heading 2", open: "<h2>", close: "</h2>", cls: "" },
-  { label: "H3", title: "Heading 3", open: "<h3>", close: "</h3>", cls: "" },
-  { label: "• List", title: "Bullet List", open: "<ul>\n  <li>", close: "</li>\n</ul>", cls: "" },
-  { label: "1. List", title: "Numbered List", open: "<ol>\n  <li>", close: "</li>\n</ol>", cls: "" },
-  { label: "</>", title: "Code Block", open: "<pre><code>", close: "</code></pre>", cls: "font-mono" },
-  { label: '"', title: "Blockquote", open: "<blockquote>", close: "</blockquote>", cls: "" },
-  { label: "Link", title: "Hyperlink", open: '<a href="URL">', close: "</a>", cls: "" },
-];
 
 const EMPTY_FORM = {
   title: "", subtitle: "", slug: "", shortDescription: "",
@@ -70,7 +61,7 @@ export default function TeacherBlogs() {
   const [activeTab, setActiveTab] = useState(0);
   const [deleting, setDeleting] = useState(null);
   const [coverUploading, setCoverUploading] = useState(false);
-  const contentRef = useRef(null);
+  const autoSaveRef = useRef(null);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -81,6 +72,27 @@ export default function TeacherBlogs() {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  // Auto-save draft every 30 seconds while editing an existing blog
+  useEffect(() => {
+    if (!dialogOpen || !editing) return;
+    autoSaveRef.current = setInterval(async () => {
+      if (!form.title.trim()) return;
+      try {
+        const payload = {
+          ...form,
+          status: "draft",
+          tags: form.tags.split(",").map((t) => t.trim()).filter(Boolean),
+        };
+        const { data } = await blogApi.updateBlog(editing, payload);
+        setBlogs((prev) => prev.map((b) => (b._id === editing ? data.blog : b)));
+        toast.success("Auto-saved", { id: "autosave", duration: 1500, icon: "💾" });
+      } catch {
+        // silent — don't interrupt the user
+      }
+    }, 30000);
+    return () => clearInterval(autoSaveRef.current);
+  }, [dialogOpen, editing, form]);
 
   const openCreate = () => {
     setEditing(null);
@@ -113,21 +125,6 @@ export default function TeacherBlogs() {
       if (name === "title" && !editing) next.slug = buildSlug(value);
       return next;
     });
-  };
-
-  // Insert HTML tag at cursor in the content textarea
-  const insertTag = (open, close) => {
-    const ta = contentRef.current;
-    if (!ta) return;
-    const start = ta.selectionStart;
-    const end = ta.selectionEnd;
-    const selected = ta.value.slice(start, end);
-    const newVal = ta.value.slice(0, start) + open + selected + close + ta.value.slice(end);
-    setForm((f) => ({ ...f, content: newVal }));
-    setTimeout(() => {
-      ta.focus();
-      ta.setSelectionRange(start + open.length, start + open.length + selected.length);
-    }, 0);
   };
 
   const handleSave = async () => {
@@ -472,46 +469,14 @@ export default function TeacherBlogs() {
 
           {/* TAB 1: CONTENT */}
           {activeTab === 1 && (
-            <div className="flex flex-col gap-4">
-
-              {/* HTML TOOLBAR */}
-              <div className="flex flex-wrap gap-1.5 p-2 rounded-xl bg-white/5 border border-white/10">
-                {TOOLBAR.map(({ label, title, open, close, cls }) => (
-                  <Tooltip key={label} title={title}>
-                    <button
-                      type="button"
-                      onClick={() => insertTag(open, close)}
-                      className={`px-2.5 py-1 rounded-lg text-xs font-semibold text-white/70 bg-white/5 hover:bg-green-600/30 hover:text-green-300 transition-colors border border-white/10 ${cls}`}
-                    >
-                      {label}
-                    </button>
-                  </Tooltip>
-                ))}
-              </div>
-
-              <TextField
-                name="content"
+            <div className="flex flex-col gap-3">
+              <RichTextEditor
                 value={form.content}
-                onChange={handleChange}
-                inputRef={contentRef}
-                multiline
-                minRows={18}
-                fullWidth
-                placeholder="Write your blog content in HTML... Use the toolbar above for formatting."
-                sx={{
-                  ...inputSx,
-                  "& .MuiOutlinedInput-root": {
-                    ...inputSx["& .MuiOutlinedInput-root"],
-                    fontFamily: "monospace",
-                    fontSize: 13,
-                    lineHeight: 1.6,
-                  },
-                }}
+                onChange={(html) => setForm((f) => ({ ...f, content: html }))}
               />
-
-              <p className="text-xs text-white/30">
-                Estimated read time: {Math.max(1, Math.ceil(form.content.replace(/<[^>]*>/g, " ").split(/\s+/).filter(Boolean).length / 200))} min
-              </p>
+              {editing && (
+                <p className="text-xs text-white/25">Auto-saves every 30 seconds</p>
+              )}
             </div>
           )}
 
@@ -528,7 +493,7 @@ export default function TeacherBlogs() {
               {form.subtitle && <p className="text-white/60 text-sm mb-4">{form.subtitle}</p>}
               <div
                 className="blog-preview text-white/70 text-sm leading-relaxed max-h-105 overflow-y-auto border border-white/10 rounded-xl p-4"
-                dangerouslySetInnerHTML={{ __html: form.content || "<p style='color:rgba(255,255,255,0.3)'>No content yet...</p>" }}
+                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(form.content || "<p style='color:rgba(255,255,255,0.3)'>No content yet...</p>") }}
               />
             </div>
           )}

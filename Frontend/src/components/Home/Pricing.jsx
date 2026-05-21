@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { CheckCircle } from "@mui/icons-material";
+import { useNavigate } from "react-router-dom";
 
 const plans = [
   {
@@ -50,6 +51,7 @@ const plans = [
 
 export default function Pricing() {
   const [yearly, setYearly] = useState(false);
+  const navigate = useNavigate();
 
   return (
     <section className="relative py-12 sm:py-14 px-4 sm:px-6 overflow-hidden bg-white">
@@ -240,6 +242,7 @@ export default function Pricing() {
                 <div className="mt-auto pt-10">
 
                   <button
+                    onClick={() => navigate(plan.monthly === 0 ? "/courses" : "/register")}
                     className={`
                     w-full py-4 rounded-2xl font-semibold transition-all duration-300
                     ${

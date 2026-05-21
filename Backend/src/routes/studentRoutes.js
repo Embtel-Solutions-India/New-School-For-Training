@@ -2,6 +2,11 @@ import { Router } from "express";
 import { protect } from "../middleware/authMiddleware.js";
 import { allowRoles } from "../middleware/rbacMiddleware.js";
 import {
+  submitReview,
+  deleteStudentReview,
+  getStudentReviews,
+} from "../controllers/reviewController.js";
+import {
   getMyCommunities,
   getCoursePosts,
   createPost,
@@ -121,6 +126,11 @@ router.get("/community/posts/:postId/replies", ...auth, getPostReplies);
 router.post("/community/posts/:postId/reply", ...auth, replyToPost);
 router.post("/community/posts/:postId/like", ...auth, likePost);
 router.post("/community/posts/:postId/summarize", ...auth, summarizePost);
+
+// ── Reviews
+router.get("/reviews", ...auth, getStudentReviews);
+router.post("/reviews", ...auth, submitReview);
+router.delete("/reviews/:id", ...auth, deleteStudentReview);
 
 // ── Profile
 router.get("/profile", ...auth, getStudentProfile);

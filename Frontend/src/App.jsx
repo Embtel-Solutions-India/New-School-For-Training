@@ -27,10 +27,22 @@ import SessionExpiredModal from "./components/Auth/SessionExpiredModal";
 import useAuthStore from "./store/authStore";
 
 const Dashboard = lazy(() => import("./pages/Dashboard"));
+const FeaturesPage = lazy(() => import("./pages/FeaturesPage"));
+const PricingPage = lazy(() => import("./pages/PricingPage"));
+const TestimonialsPage = lazy(() => import("./pages/TestimonialsPage"));
+const CareersPage = lazy(() => import("./pages/CareersPage"));
+const CommunityPage = lazy(() => import("./pages/CommunityPage"));
+const CookiesPage = lazy(() => import("./pages/CookiesPage"));
 
 const DashboardFallback = () => (
   <div className="min-h-screen flex items-center justify-center bg-[#070b14] text-green-200 font-semibold">
     Loading dashboard...
+  </div>
+);
+
+const PageFallback = () => (
+  <div className="min-h-screen flex items-center justify-center bg-white text-gray-400 font-semibold">
+    Loading...
   </div>
 );
 
@@ -86,6 +98,12 @@ useEffect(() => {
         <Route path="/terms" element={<TermAndConditions />} />
         <Route path="/help" element={<HelpCenterPage />} />
         <Route path="/certificate/verify/:certId" element={<CertificateVerifyPage />} />
+        <Route path="/features" element={<Suspense fallback={<PageFallback />}><FeaturesPage /></Suspense>} />
+        <Route path="/pricing" element={<Suspense fallback={<PageFallback />}><PricingPage /></Suspense>} />
+        <Route path="/testimonials" element={<Suspense fallback={<PageFallback />}><TestimonialsPage /></Suspense>} />
+        <Route path="/careers" element={<Suspense fallback={<PageFallback />}><CareersPage /></Suspense>} />
+        <Route path="/community" element={<Suspense fallback={<PageFallback />}><CommunityPage /></Suspense>} />
+        <Route path="/cookies" element={<Suspense fallback={<PageFallback />}><CookiesPage /></Suspense>} />
       </Routes>
     </BrowserRouter>
   );

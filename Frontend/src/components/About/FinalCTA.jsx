@@ -47,7 +47,7 @@ const FinalCTA = () => {
           className="mt-10 flex flex-col sm:flex-row justify-center gap-4 flex-wrap"
         >
           {/* PRIMARY */}
-          <Button className="!bg-green-700 !text-white !px-8 !py-3 !rounded-md hover:!bg-orange-500 hover:!text-black transition">
+          <Button onClick={() => navigate("/courses")} className="!bg-green-700 !text-white !px-8 !py-3 !rounded-md hover:!bg-orange-500 hover:!text-black transition">
             Explore Courses
           </Button>
 

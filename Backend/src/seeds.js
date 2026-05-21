@@ -13,7 +13,7 @@ const seedAdmin = async () => {
     });
     console.log('✓ Connected to MongoDB');
 
-    const adminEmail = process.env.ADMIN_EMAIL || 'admin@gyano.com';
+    const adminEmail = process.env.ADMIN_EMAIL || 'admin@sft.com';
     const adminPassword = process.env.ADMIN_PASSWORD || 'Admin@123456';
     const adminName = 'Platform Administrator';
 

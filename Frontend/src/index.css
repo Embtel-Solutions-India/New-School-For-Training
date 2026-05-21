@@ -1,5 +1,158 @@
 @import "tailwindcss";
 
+/* Tailwind v4: class-based dark mode */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ── Dashboard light theme ────────────────────────────────── */
+/* Glass cards → white cards */
+.dashboard-light .backdrop-blur-2xl {
+  background: rgba(255, 255, 255, 0.88) !important;
+  border-color: rgba(15, 23, 42, 0.10) !important;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06) !important;
+  color: #0f172a !important;
+}
+
+/* Topbar — placed after backdrop-blur-2xl so it wins on header */
+.dashboard-light header.fixed {
+  background-color: rgba(248, 250, 252, 0.92) !important;
+  border-bottom-color: rgba(15, 23, 42, 0.08) !important;
+  backdrop-filter: blur(24px) !important;
+}
+
+/* All white text → dark */
+.dashboard-light [class*="text-white"] {
+  color: #0f172a !important;
+}
+
+/* Keep intended white labels on saturated controls, badges, and gradient icons. */
+.dashboard-light [class*="bg-blue-"][class*="text-white"],
+.dashboard-light [class*="bg-sky-"][class*="text-white"],
+.dashboard-light [class*="bg-cyan-"][class*="text-white"],
+.dashboard-light [class*="bg-emerald-"][class*="text-white"],
+.dashboard-light [class*="bg-green-"][class*="text-white"],
+.dashboard-light [class*="bg-red-"][class*="text-white"],
+.dashboard-light [class*="bg-orange-"][class*="text-white"],
+.dashboard-light [class*="bg-violet-"][class*="text-white"],
+.dashboard-light [class*="bg-indigo-"][class*="text-white"],
+.dashboard-light [class*="bg-rose-"][class*="text-white"],
+.dashboard-light [class*="bg-purple-"][class*="text-white"],
+.dashboard-light [class*="bg-gradient-to"][class*="text-white"] {
+  color: #ffffff !important;
+}
+
+.dashboard-light [class*="bg-blue-"][class*="text-white"] svg,
+.dashboard-light [class*="bg-sky-"][class*="text-white"] svg,
+.dashboard-light [class*="bg-cyan-"][class*="text-white"] svg,
+.dashboard-light [class*="bg-emerald-"][class*="text-white"] svg,
+.dashboard-light [class*="bg-green-"][class*="text-white"] svg,
+.dashboard-light [class*="bg-red-"][class*="text-white"] svg,
+.dashboard-light [class*="bg-orange-"][class*="text-white"] svg,
+.dashboard-light [class*="bg-violet-"][class*="text-white"] svg,
+.dashboard-light [class*="bg-indigo-"][class*="text-white"] svg,
+.dashboard-light [class*="bg-rose-"][class*="text-white"] svg,
+.dashboard-light [class*="bg-purple-"][class*="text-white"] svg,
+.dashboard-light [class*="bg-gradient-to"][class*="text-white"] svg {
+  color: #ffffff !important;
+}
+/* Opacity variants — override the rule above (same specificity, later wins) */
+.dashboard-light [class*="text-white/1"],
+.dashboard-light [class*="text-white/2"],
+.dashboard-light [class*="text-white/3"] {
+  color: rgba(15, 23, 42, 0.28) !important;
+}
+.dashboard-light [class*="text-white/4"] {
+  color: rgba(15, 23, 42, 0.42) !important;
+}
+.dashboard-light [class*="text-white/5"] {
+  color: rgba(15, 23, 42, 0.52) !important;
+}
+.dashboard-light [class*="text-white/6"],
+.dashboard-light [class*="text-white/7"] {
+  color: rgba(15, 23, 42, 0.65) !important;
+}
+.dashboard-light [class*="text-white/8"],
+.dashboard-light [class*="text-white/9"] {
+  color: rgba(15, 23, 42, 0.85) !important;
+}
+
+/* Dark hex backgrounds → light */
+.dashboard-light [class*="bg-[#0"] {
+  background-color: #f8fafc !important;
+}
+.dashboard-light [class*="bg-[#1"] {
+  background-color: #f1f5f9 !important;
+}
+.dashboard-light [class*="bg-black/"] {
+  background-color: rgba(255, 255, 255, 0.55) !important;
+}
+
+/* Translucent white surfaces */
+.dashboard-light [class*="bg-white/"] {
+  background-color: rgba(255, 255, 255, 0.65) !important;
+}
+
+/* Borders */
+.dashboard-light [class*="border-white/"] {
+  border-color: rgba(15, 23, 42, 0.10) !important;
+}
+
+/* Active sidebar item: keep contrast on light sidebar */
+.dashboard-light .bg-white.shadow-lg {
+  background-color: #1e293b !important;
+  color: #ffffff !important;
+}
+
+.dashboard-light .bg-white.shadow-lg svg,
+.dashboard-light .bg-white.shadow-lg [class*="text-emerald"] {
+  color: #ffffff !important;
+}
+
+/* Recharts: hardcoded dark-theme strokes are inline in many dashboard charts. */
+.dashboard-light .recharts-cartesian-axis-line,
+.dashboard-light .recharts-cartesian-axis-tick-line {
+  stroke: rgba(71, 85, 105, 0.45) !important;
+}
+
+.dashboard-light .recharts-cartesian-grid line {
+  stroke: rgba(15, 23, 42, 0.10) !important;
+}
+
+.dashboard-light .recharts-cartesian-axis-tick text,
+.dashboard-light .recharts-text.recharts-cartesian-axis-tick-value {
+  fill: #475569 !important;
+  color: #475569 !important;
+}
+
+.dashboard-light .recharts-default-tooltip {
+  background-color: #ffffff !important;
+  border-color: rgba(15, 23, 42, 0.14) !important;
+  color: #0f172a !important;
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.12) !important;
+}
+
+.dashboard-light .recharts-tooltip-label,
+.dashboard-light .recharts-tooltip-item {
+  color: #0f172a !important;
+}
+
+/* MUI fields/tables inherit dark utility classes in dashboard components. */
+.dashboard-light .MuiInputBase-root,
+.dashboard-light .MuiInputBase-input,
+.dashboard-light .MuiSelect-select,
+.dashboard-light .MuiTableCell-root,
+.dashboard-light .MuiFormLabel-root {
+  color: #0f172a !important;
+}
+
+.dashboard-light .MuiInputBase-input::placeholder {
+  color: rgba(71, 85, 105, 0.72) !important;
+  opacity: 1 !important;
+}
+
+.dashboard-light .MuiOutlinedInput-notchedOutline {
+  border-color: rgba(15, 23, 42, 0.18) !important;
+}
+
 * {
   box-sizing: border-box;
 }

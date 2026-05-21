@@ -10,6 +10,7 @@ const reviewSchema = new mongoose.Schema(
     teacherReply: { type: String, trim: true, default: "" },
     teacherRepliedAt: Date,
     isPublic: { type: Boolean, default: true },
+    isFeatured: { type: Boolean, default: false, index: true },
     helpfulCount: { type: Number, default: 0 },
   },
   { timestamps: true }
