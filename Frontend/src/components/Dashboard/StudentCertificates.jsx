@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Skeleton, TextField } from "@mui/material";
 import { Award, CheckCircle2, Download, ExternalLink, Search, Shield } from "lucide-react";
@@ -129,14 +130,25 @@ const StudentCertificates = () => {
                   <CheckCircle2 size={13} className="text-emerald-400" />
                   <span className="text-xs text-emerald-300">Verified</span>
                 </div>
-                <button
-                  onClick={() => handleDownload(cert)}
-                  disabled={downloading === cert._id}
-                  className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-xl bg-amber-500/15 py-2 text-xs font-semibold text-amber-300 hover:bg-amber-500/25 transition disabled:opacity-50"
-                >
-                  <Download size={13} />
-                  {downloading === cert._id ? "Downloading…" : "Download PDF"}
-                </button>
+                <div className="mt-3 flex gap-2">
+                  <button
+                    onClick={() => handleDownload(cert)}
+                    disabled={downloading === cert._id}
+                    className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-amber-500/15 py-2 text-xs font-semibold text-amber-300 hover:bg-amber-500/25 transition disabled:opacity-50"
+                  >
+                    <Download size={13} />
+                    {downloading === cert._id ? "Downloading…" : "Download PDF"}
+                  </button>
+                  <Link
+                    to={`/certificate/verify/${cert.certificateId}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center gap-1.5 rounded-xl bg-sky-500/15 px-3 py-2 text-xs font-semibold text-sky-300 hover:bg-sky-500/25 transition"
+                  >
+                    <ExternalLink size={13} />
+                    View
+                  </Link>
+                </div>
               </div>
             </motion.div>
           ))}

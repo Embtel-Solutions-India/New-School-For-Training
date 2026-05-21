@@ -41,13 +41,15 @@ const submitAssignment = (courseId, assignmentId, data) =>
 
 // ── Quizzes
 const getQuizHistory = (params) => api.get(`${S}/quizzes`, { params });
+const getAvailableQuizzes = () => api.get(`${S}/quizzes/available`);
 const getCourseQuizzes = (courseId) => api.get(`${S}/courses/${courseId}/quizzes`);
 const submitQuizAttempt = (courseId, quizId, data) =>
   api.post(`${S}/courses/${courseId}/quizzes/${quizId}/attempt`, data);
 
-// ── Leaderboard & Achievements
-const getLeaderboard = () => api.get(`${S}/leaderboard`);
+// ── Leaderboard, Achievements & XP
+const getLeaderboard = (params) => api.get(`${S}/leaderboard`, { params });
 const getMyAchievements = () => api.get(`${S}/achievements`);
+const getXpProfile = () => api.get(`${S}/xp`);
 
 // ── Notifications
 const getNotifications = (params) => api.get(`${S}/notifications`, { params });
@@ -65,10 +67,39 @@ const enrollCourse = (courseId) => api.post(`${S}/courses/${courseId}/enroll`);
 // ── Downloads
 const getDownloads = () => api.get(`${S}/downloads`);
 
+// ── Community
+const getMyCommunities = () => api.get(`${S}/community`);
+const getTrendingPosts = () => api.get(`${S}/community/trending`);
+const getCoursePosts = (courseId, params) => api.get(`${S}/community/${courseId}/posts`, { params });
+const createCommunityPost = (courseId, data) => api.post(`${S}/community/${courseId}/posts`, data);
+const getCourseAnnouncements = (courseId) => api.get(`${S}/community/${courseId}/announcements`);
+const getPostReplies = (postId) => api.get(`${S}/community/posts/${postId}/replies`);
+const replyToPost = (postId, data) => api.post(`${S}/community/posts/${postId}/reply`, data);
+const likePost = (postId) => api.post(`${S}/community/posts/${postId}/like`);
+const summarizePost = (postId) => api.post(`${S}/community/posts/${postId}/summarize`);
+
+// ── Placement / Jobs
+const getJobs = (params) => api.get("/jobs", { params });
+const getRecommendedJobs = () => api.get("/jobs/recommended");
+const getJobById = (id) => api.get(`/jobs/${id}`);
+const getMyApplications = () => api.get("/jobs/my-applications");
+const getSavedJobs = () => api.get("/jobs/saved");
+const applyJob = (id, data) => api.post(`/jobs/${id}/apply`, data);
+const toggleSaveJob = (id) => api.post(`/jobs/${id}/save`);
+
+// ── Resume
+const getMyResume = () => api.get("/resume");
+const saveResume = (data) => api.post("/resume", data);
+const autofillResume = () => api.post("/resume/autofill");
+const aiEnhanceResume = (data) => api.post("/resume/ai-enhance", { resumeData: data });
+const downloadResumePDF = () => api.get("/resume/download", { responseType: "blob" });
+
 // ── Profile
 const getProfile = () => api.get(`${S}/profile`);
 const updateProfile = (data) => api.patch(`${S}/profile`, data);
 const changePassword = (data) => api.patch(`${S}/profile/password`, data);
+const generateAIAvatar = () => api.post(`${S}/profile/avatar/generate`);
+const getStudentActivity = (params) => api.get(`${S}/profile/activity`, { params });
 
 const studentApi = {
   getOverview,
@@ -79,12 +110,16 @@ const studentApi = {
   getLearningProgress,
   getUpcomingLiveClasses, joinLiveClass, leaveLiveClass, getAttendanceHistory,
   getMyAssignments, submitAssignment,
-  getQuizHistory, getCourseQuizzes, submitQuizAttempt,
-  getLeaderboard, getMyAchievements,
+  getQuizHistory, getAvailableQuizzes, getCourseQuizzes, submitQuizAttempt,
+  getLeaderboard, getMyAchievements, getXpProfile,
   getNotifications, markNotificationRead, markAllNotificationsRead,
   getBookmarks, addBookmark, removeBookmark,
   getDownloads,
-  getProfile, updateProfile, changePassword,
+  getMyCommunities, getTrendingPosts, getCoursePosts, createCommunityPost,
+  getCourseAnnouncements, getPostReplies, replyToPost, likePost, summarizePost,
+  getProfile, updateProfile, changePassword, generateAIAvatar, getStudentActivity,
+  getJobs, getRecommendedJobs, getJobById, getMyApplications, getSavedJobs, applyJob, toggleSaveJob,
+  getMyResume, saveResume, autofillResume, aiEnhanceResume, downloadResumePDF,
 };
 
 export default studentApi;

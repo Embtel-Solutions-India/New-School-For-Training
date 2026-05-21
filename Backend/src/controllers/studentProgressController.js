@@ -1,6 +1,11 @@
 import mongoose from "mongoose";
 import Enrollment from "../models/Enrollment.js";
 import Course from "../models/Course.js";
+import User from "../models/User.js";
+import QuizAttempt from "../models/QuizAttempt.js";
+import Submission from "../models/Submission.js";
+import ActivityLog from "../models/ActivityLog.js";
+import { getUserXP } from "../services/xpService.js";
 import ApiError from "../utils/ApiError.js";
 import asyncHandler from "../utils/asyncHandler.js";
 
@@ -103,6 +108,46 @@ export const getProgressAnalytics = asyncHandler(async (req, res) => {
       progressBuckets: buckets,
       enrollmentTrend,
       topStudents,
+    },
+  });
+});
+
+export const getTeacherStudentView = asyncHandler(async (req, res) => {
+  const { studentId } = req.params;
+  const teacherId = req.user._id;
+
+  // Verify this teacher has at least one enrollment for this student
+  const sharedEnrollment = await Enrollment.findOne({ user: studentId, teacher: teacherId }).lean();
+  if (!sharedEnrollment) throw new ApiError(403, "No shared enrollment found");
+
+  const [user, enrollments, recentActivity, recentQuizzes, recentSubmissions, xpData] = await Promise.all([
+    User.findById(studentId).select("name avatar email bio skills interests learningGoals portfolio socialLinks profileLastUpdated createdAt").lean(),
+    Enrollment.find({ user: studentId, teacher: teacherId })
+      .populate("course", "title thumbnail")
+      .sort({ updatedAt: -1 })
+      .lean(),
+    ActivityLog.find({ user: studentId }).sort({ createdAt: -1 }).limit(10).lean(),
+    QuizAttempt.find({ student: studentId }).sort({ createdAt: -1 }).limit(5).lean(),
+    Submission.find({ student: studentId }).sort({ createdAt: -1 }).limit(5).lean(),
+    getUserXP(studentId),
+  ]);
+
+  if (!user) throw new ApiError(404, "Student not found");
+
+  res.json({
+    success: true,
+    student: {
+      ...user,
+      enrollments,
+      recentActivity,
+      recentQuizzes,
+      recentSubmissions,
+      xp: {
+        totalXP: xpData.totalXP,
+        level: xpData.level,
+        streak: xpData.streak,
+        badges: xpData.unlockedBadges || [],
+      },
     },
   });
 });

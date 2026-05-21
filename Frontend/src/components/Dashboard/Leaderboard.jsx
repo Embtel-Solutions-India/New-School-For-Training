@@ -1,31 +1,49 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Skeleton } from "@mui/material";
-import { Award, BookOpen, CheckCircle2, Crown, Flame, Star, Trophy, Zap } from "lucide-react";
+import { Award, CheckCircle2, Crown, Star, Trophy, Zap } from "lucide-react";
 import toast from "react-hot-toast";
 import studentApi from "../../services/studentApi";
 
 const glass = "border border-white/10 bg-white/[0.07] shadow-[0_24px_90px_rgba(0,0,0,0.32)] backdrop-blur-2xl";
-
 const RANK_COLORS = ["#ffd700", "#c0c0c0", "#cd7f32"];
+const PERIODS = [
+  { key: undefined,   label: "All Time" },
+  { key: "weekly",    label: "This Week" },
+  { key: "monthly",   label: "This Month" },
+];
 
 const Leaderboard = () => {
   const [board, setBoard] = useState([]);
   const [achievements, setAchievements] = useState(null);
   const [myRank, setMyRank] = useState(null);
+  const [period, setPeriod] = useState(undefined);
   const [loading, setLoading] = useState(true);
+  const [boardLoading, setBoardLoading] = useState(false);
 
+  // Load achievements once on mount
   useEffect(() => {
-    Promise.all([
-      studentApi.getLeaderboard(),
-      studentApi.getMyAchievements(),
-    ]).then(([lb, ach]) => {
-      setBoard(lb.data.leaderboard || []);
-      setMyRank(lb.data.myRank);
-      setAchievements(ach.data.achievements);
-    }).catch(() => toast.error("Failed to load leaderboard"))
-      .finally(() => setLoading(false));
+    studentApi.getMyAchievements()
+      .then(({ data }) => setAchievements(data.achievements))
+      .catch(() => {});
   }, []);
+
+  // Reload leaderboard whenever period changes
+  const loadBoard = useCallback(async () => {
+    try {
+      setBoardLoading(true);
+      const { data } = await studentApi.getLeaderboard(period ? { period } : undefined);
+      setBoard(data.leaderboard || []);
+      setMyRank(data.myRank);
+    } catch {
+      toast.error("Failed to load leaderboard");
+    } finally {
+      setBoardLoading(false);
+      setLoading(false);
+    }
+  }, [period]);
+
+  useEffect(() => { loadBoard(); }, [loadBoard]);
 
   return (
     <div className="space-y-6">
@@ -88,8 +106,18 @@ const Leaderboard = () => {
 
       {/* Leaderboard Table */}
       <div className={`rounded-[24px] ${glass} p-6`}>
-        <p className="mb-4 font-semibold">Top Learners</p>
-        {loading ? (
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <p className="font-semibold">Top Learners</p>
+          <div className="flex gap-1 rounded-2xl border border-white/10 bg-white/[0.04] p-1">
+            {PERIODS.map(({ key, label }) => (
+              <button key={label} onClick={() => setPeriod(key)}
+                className={`rounded-xl px-3 py-1.5 text-xs font-semibold transition ${period === key ? "bg-yellow-500/20 text-yellow-200" : "text-white/50 hover:text-white/80"}`}>
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+        {loading || boardLoading ? (
           <div className="space-y-3">
             {Array.from({ length: 10 }).map((_, i) => <Skeleton key={i} variant="rounded" height={56} sx={{ bgcolor: "rgba(255,255,255,0.06)" }} />)}
           </div>

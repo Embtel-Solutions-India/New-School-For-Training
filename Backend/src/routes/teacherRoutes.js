@@ -21,8 +21,15 @@ import {
 import {
   getQuestions, createQuestion, updateQuestion, deleteQuestion, getQuestionStats,
 } from "../controllers/questionBankController.js";
-import { getStudentProgress, getProgressAnalytics, updateStudentProgress } from "../controllers/studentProgressController.js";
+import { getStudentProgress, getProgressAnalytics, updateStudentProgress, getTeacherStudentView } from "../controllers/studentProgressController.js";
+import {
+  getCourseAnnouncements, createAnnouncement, deleteAnnouncement,
+  getPendingQuestions, resolveQuestion, lockDiscussion,
+} from "../controllers/communityController.js";
 import { getContentAnalytics } from "../controllers/contentAnalyticsController.js";
+import {
+  getAssignmentSubmissions, gradeSubmission, getPendingSubmissions, getQuizAttempts,
+} from "../controllers/submissionController.js";
 
 // Reuse course controller for teacher course/quiz/assignment operations
 import {
@@ -111,6 +118,12 @@ router.delete("/courses/:courseId/assignments/:assignmentId", ...auth, async (re
   res.json({ success: true, course });
 });
 
+// ── Submissions (teacher views & grades student work)
+router.get("/submissions", ...auth, getPendingSubmissions);
+router.get("/courses/:courseId/assignments/:assignmentId/submissions", ...auth, getAssignmentSubmissions);
+router.patch("/submissions/:submissionId", ...auth, gradeSubmission);
+router.get("/courses/:courseId/quizzes/:quizId/attempts", ...auth, getQuizAttempts);
+
 // ── Live Classes
 router.get("/live", ...auth, getLiveClasses);
 router.post("/live", ...auth, createLiveClass);
@@ -132,6 +145,7 @@ router.post("/notifications", ...auth, sendNotification);
 // ── Student Progress
 router.get("/students", ...auth, getStudentProgress);
 router.get("/students/analytics", ...auth, getProgressAnalytics);
+router.get("/students/:studentId/profile", ...auth, getTeacherStudentView);
 router.patch("/students/:enrollmentId/progress", ...auth, updateStudentProgress);
 
 // ── Reviews
@@ -139,11 +153,19 @@ router.get("/reviews", ...auth, getTeacherReviews);
 router.patch("/reviews/:id/reply", ...auth, replyToReview);
 router.delete("/reviews/:id/reply", ...auth, deleteReviewReply);
 
-// ── Discussions
+// ── Discussions (moderation)
 router.get("/discussions/:courseId", ...auth, getCourseDiscussions);
 router.post("/discussions/:id/reply", ...auth, replyToDiscussion);
 router.patch("/discussions/:id/pin", ...auth, pinDiscussion);
 router.delete("/discussions/:id", ...auth, deleteDiscussion);
+router.patch("/discussions/:id/lock", ...auth, lockDiscussion);
+
+// ── Community (announcements + Q&A)
+router.get("/community/:courseId/announcements", ...auth, getCourseAnnouncements);
+router.post("/community/:courseId/announcements", ...auth, createAnnouncement);
+router.delete("/community/announcements/:id", ...auth, deleteAnnouncement);
+router.get("/community/:courseId/questions", ...auth, getPendingQuestions);
+router.patch("/community/questions/:id/resolve", ...auth, resolveQuestion);
 
 // ── Question Bank
 router.get("/question-bank", ...auth, getQuestions);

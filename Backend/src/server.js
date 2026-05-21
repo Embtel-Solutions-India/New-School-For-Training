@@ -48,6 +48,14 @@ const startServer = async () => {
     socket.on("leave-user-room", (userId) => {
       if (userId) socket.leave(`user:${userId}`);
     });
+
+    socket.on("join-community", (courseId) => {
+      if (courseId) socket.join(`community:${courseId}`);
+    });
+
+    socket.on("leave-community", (courseId) => {
+      if (courseId) socket.leave(`community:${courseId}`);
+    });
   });
 
   httpServer.listen(port, () => {

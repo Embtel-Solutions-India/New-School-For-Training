@@ -35,6 +35,14 @@ const createAssignment = (courseId, data) => api.post(`${T}/courses/${courseId}/
 const updateAssignment = (courseId, assignId, data) => api.patch(`${T}/courses/${courseId}/assignments/${assignId}`, data);
 const deleteAssignment = (courseId, assignId) => api.delete(`${T}/courses/${courseId}/assignments/${assignId}`);
 
+// ── Submissions & Grading
+const getPendingSubmissions = (params) => api.get(`${T}/submissions`, { params });
+const getAssignmentSubmissions = (courseId, assignmentId) =>
+  api.get(`${T}/courses/${courseId}/assignments/${assignmentId}/submissions`);
+const gradeSubmission = (submissionId, data) => api.patch(`${T}/submissions/${submissionId}`, data);
+const getQuizAttempts = (courseId, quizId) =>
+  api.get(`${T}/courses/${courseId}/quizzes/${quizId}/attempts`);
+
 // ── Live Classes
 const getLiveClasses = (params) => api.get(`${T}/live`, { params });
 const getLiveClass = (id) => api.get(`${T}/live/${id}`);
@@ -57,6 +65,7 @@ const sendNotification = (data) => api.post(`${T}/notifications`, data);
 const getStudents = (params) => api.get(`${T}/students`, { params });
 const getProgressAnalytics = (params) => api.get(`${T}/students/analytics`, { params });
 const updateStudentProgress = (enrollmentId, data) => api.patch(`${T}/students/${enrollmentId}/progress`, data);
+const getTeacherStudentProfile = (studentId) => api.get(`${T}/students/${studentId}/profile`);
 
 // ── Reviews
 const getReviews = (params) => api.get(`${T}/reviews`, { params });
@@ -67,7 +76,15 @@ const deleteReviewReply = (id) => api.delete(`${T}/reviews/${id}/reply`);
 const getDiscussions = (courseId, params) => api.get(`${T}/discussions/${courseId}`, { params });
 const replyToDiscussion = (id, content) => api.post(`${T}/discussions/${id}/reply`, { content });
 const pinDiscussion = (id) => api.patch(`${T}/discussions/${id}/pin`);
+const lockDiscussion = (id) => api.patch(`${T}/discussions/${id}/lock`);
 const deleteDiscussion = (id) => api.delete(`${T}/discussions/${id}`);
+
+// ── Community (announcements + Q&A)
+const getCommunityAnnouncements = (courseId) => api.get(`${T}/community/${courseId}/announcements`);
+const createAnnouncement = (courseId, data) => api.post(`${T}/community/${courseId}/announcements`, data);
+const deleteAnnouncement = (id) => api.delete(`${T}/community/announcements/${id}`);
+const getPendingQuestions = (courseId) => api.get(`${T}/community/${courseId}/questions`);
+const resolveQuestion = (id) => api.patch(`${T}/community/questions/${id}/resolve`);
 
 // ── Question Bank
 const getQuestions = (params) => api.get(`${T}/question-bank`, { params });
@@ -79,6 +96,14 @@ const getQuestionStats = () => api.get(`${T}/question-bank/stats`);
 // ── Content Analytics
 const getContentAnalytics = (params) => api.get(`${T}/analytics/content`, { params });
 
+// ── Job Postings
+const createJob = (data) => api.post("/jobs", data);
+const updateJob = (id, data) => api.patch(`/jobs/${id}`, data);
+const deleteJob = (id) => api.delete(`/jobs/${id}`);
+const getMyJobPostings = () => api.get("/jobs/my-postings");
+const getJobApplicants = (jobId) => api.get(`/jobs/${jobId}/applicants`);
+const updateApplicationStatus = (appId, data) => api.patch(`/jobs/applications/${appId}/status`, data);
+
 const teacherApi = {
   getOverview,
   getCourses, getCourseById, createCourse, updateCourse, deleteCourse, publishCourse,
@@ -86,16 +111,19 @@ const teacherApi = {
   createLesson, updateLesson, deleteLesson, reorderLessons,
   createQuiz, updateQuiz, deleteQuiz,
   createAssignment, updateAssignment, deleteAssignment,
+  getPendingSubmissions, getAssignmentSubmissions, gradeSubmission, getQuizAttempts,
   getLiveClasses, getLiveClass, createLiveClass, updateLiveClass, deleteLiveClass,
   cancelLiveClass, startLiveClass, endLiveClass,
   getSessionAttendance, markAttendance, getAttendanceReport,
   attachRecording, getRecordings,
   sendNotification,
-  getStudents, getProgressAnalytics, updateStudentProgress,
+  getStudents, getProgressAnalytics, updateStudentProgress, getTeacherStudentProfile,
   getReviews, replyToReview, deleteReviewReply,
-  getDiscussions, replyToDiscussion, pinDiscussion, deleteDiscussion,
+  getDiscussions, replyToDiscussion, pinDiscussion, lockDiscussion, deleteDiscussion,
+  getCommunityAnnouncements, createAnnouncement, deleteAnnouncement, getPendingQuestions, resolveQuestion,
   getQuestions, createQuestion, updateQuestion, deleteQuestion, getQuestionStats,
   getContentAnalytics,
+  createJob, updateJob, deleteJob, getMyJobPostings, getJobApplicants, updateApplicationStatus,
 };
 
 export default teacherApi;

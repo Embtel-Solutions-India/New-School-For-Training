@@ -2,12 +2,13 @@ import { useCallback, useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Skeleton, Pagination, FormControl, InputLabel, MenuItem, Select } from "@mui/material";
 import {
-  BarChart, Bar, CartesianGrid, Cell, PieChart, Pie,
+  BarChart, Bar, CartesianGrid, Cell,
   ResponsiveContainer, Tooltip as ChartTooltip, XAxis, YAxis,
 } from "recharts";
-import { TrendingUp, Users } from "lucide-react";
+import { TrendingUp, Users, UserCircle } from "lucide-react";
 import toast from "react-hot-toast";
 import teacherApi from "../../services/teacherApi";
+import TeacherStudentModal from "./TeacherStudentModal";
 
 const glass = "border border-white/10 bg-white/[0.07] shadow-[0_24px_90px_rgba(0,0,0,0.32)] backdrop-blur-2xl";
 const TOOLTIP_STYLE = { background: "#08111f", border: "1px solid rgba(255,255,255,.12)", borderRadius: 16, color: "white" };
@@ -24,6 +25,7 @@ const StudentProgressAnalytics = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [sortBy, setSortBy] = useState("progress");
   const [courseFilter, setCourseFilter] = useState("");
+  const [viewStudentId, setViewStudentId] = useState(null);
 
   const fetchAnalytics = useCallback(async () => {
     try {
@@ -197,13 +199,17 @@ const StudentProgressAnalytics = () => {
                       style={{ width: `${e.progress}%` }} />
                   </div>
                 </div>
-                <div className="shrink-0 text-right">
+                <div className="shrink-0 flex flex-col items-end gap-1">
                   {e.isCompleted ? (
                     <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs font-bold text-emerald-300">Completed</span>
                   ) : (
                     <span className="rounded-full bg-white/10 px-2 py-0.5 text-xs text-white/50 capitalize">{e.status}</span>
                   )}
-                  <p className="mt-0.5 text-xs text-white/30">{new Date(e.updatedAt).toLocaleDateString()}</p>
+                  <p className="text-xs text-white/30">{new Date(e.updatedAt).toLocaleDateString()}</p>
+                  <button onClick={() => setViewStudentId(e.user?._id)}
+                    className="mt-0.5 flex items-center gap-1 rounded-lg border border-sky-400/20 bg-sky-400/10 px-2 py-0.5 text-xs text-sky-300 hover:bg-sky-400/20 transition">
+                    <UserCircle size={11} />View Profile
+                  </button>
                 </div>
               </motion.div>
             ))}
@@ -216,6 +222,10 @@ const StudentProgressAnalytics = () => {
           </div>
         )}
       </div>
+
+      {viewStudentId && (
+        <TeacherStudentModal studentId={viewStudentId} onClose={() => setViewStudentId(null)} />
+      )}
     </div>
   );
 };

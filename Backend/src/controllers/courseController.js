@@ -1,7 +1,10 @@
 import Course from "../models/Course.js";
+import Enrollment from "../models/Enrollment.js";
+import Notification from "../models/Notification.js";
 import ApiError from "../utils/ApiError.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import { normalizeRole } from "../utils/roles.js";
+import { emitToUsers } from "../services/socketService.js";
 
 const buildSlug = (title = "") =>
   title
@@ -136,6 +139,30 @@ export const createAssignment = asyncHandler(async (req, res) => {
   course.curriculum.assignments.push(req.body);
   await course.save();
   res.status(201).json({ success: true, course });
+
+  // Notify enrolled students (fire-and-forget)
+  const assignment = req.body;
+  Enrollment.find({ course: course._id, status: "active" }).select("student").lean()
+    .then((enrollments) => {
+      const studentIds = enrollments.map((e) => e.student);
+      if (!studentIds.length) return;
+      Notification.create({
+        title: "New Assignment Posted",
+        message: `A new assignment "${assignment.title}" has been posted in "${course.title}". ${assignment.dueDate ? `Due: ${new Date(assignment.dueDate).toLocaleDateString()}.` : ""}`,
+        type: "info",
+        targetAudience: "specific",
+        targetUsers: studentIds,
+        sentBy: req.user._id,
+        isActive: true,
+      }).catch(() => {});
+      emitToUsers(studentIds, "assignment-created", {
+        courseId: course._id,
+        courseTitle: course.title,
+        assignmentTitle: assignment.title,
+        dueDate: assignment.dueDate,
+      });
+    })
+    .catch(() => {});
 });
 
 export const getPublicCourses = asyncHandler(async (req, res) => {

@@ -33,6 +33,7 @@ import {
   Zap,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 import { roleMenus, roles } from "../../data/dashboardConfig";
 import useAuthStore from "../../store/authStore";
 import { formatRole, normalizeRole } from "../../utils/roles";
@@ -87,6 +88,9 @@ import Bookmarks from "./Bookmarks";
 import DownloadCenter from "./DownloadCenter";
 import ProfileSettings from "./ProfileSettings";
 import StudentAIAssistant from "./StudentAIAssistant";
+import CourseCommunity from "./CourseCommunity";
+import PlacementCell from "./PlacementCell";
+import TeacherJobPostings from "./TeacherJobPostings";
 
 const sectionTitles = {
   "s-overview": "Dashboard Overview",
@@ -102,6 +106,8 @@ const sectionTitles = {
   "s-notifications": "Notifications",
   "s-bookmarks": "Bookmarks",
   "s-downloads": "Download Center",
+  "s-community": "Course Communities",
+  "s-placement": "Placement Cell",
   "s-profile": "Profile Settings",
   "s-ai-assistant": "AI Learning Assistant",
   "t-overview": "Dashboard Overview",
@@ -118,6 +124,7 @@ const sectionTitles = {
   "t-analytics": "Content Analytics",
   "t-discussions": "Discussion Moderation",
   "t-blogs": "Blog Management",
+  "t-jobs": "Job Postings",
   overview: "Dashboard Overview",
   teachers: "Teacher Credentials",
   users: "User Management",
@@ -194,6 +201,8 @@ const StudentSectionRouter = ({ section }) => {
     "s-notifications": <StudentNotifications />,
     "s-bookmarks": <Bookmarks />,
     "s-downloads": <DownloadCenter />,
+    "s-community": <CourseCommunity />,
+    "s-placement": <PlacementCell />,
     "s-profile": <ProfileSettings />,
     "s-ai-assistant": <StudentAIAssistant />,
   };
@@ -216,6 +225,7 @@ const TeacherSectionRouter = ({ section }) => {
     "t-analytics": <ContentAnalytics />,
     "t-discussions": <DiscussionModeration />,
     "t-blogs": <TeacherBlogs />,
+    "t-jobs": <TeacherJobPostings />,
   };
   return map[section] || <TeacherOverview />;
 };
@@ -304,11 +314,101 @@ const DashboardShell = () => {
       refreshNavNotifs();
     };
 
+    const assignmentCreatedHandler = (data) => {
+      refreshNavNotifs();
+      if ("Notification" in window && Notification.permission === "granted") {
+        new Notification(`New Assignment: ${data.assignmentTitle}`, {
+          body: `${data.courseTitle}${data.dueDate ? ` · Due: ${new Date(data.dueDate).toLocaleDateString()}` : ""}`,
+          icon: "/images/sft_logo.png",
+        });
+      }
+    };
+
+    const assignmentGradedHandler = (data) => {
+      refreshNavNotifs();
+      if ("Notification" in window && Notification.permission === "granted") {
+        new Notification(`Assignment Graded: ${data.assignmentTitle}`, {
+          body: `Score: ${data.score}/${data.maxScore} — ${data.courseTitle}`,
+          icon: "/images/sft_logo.png",
+        });
+      }
+    };
+
+    const badgeUnlockedHandler = (data) => {
+      const { badge } = data;
+      if (badge) {
+        toast(`${badge.icon} Badge Unlocked: ${badge.label}`, {
+          duration: 5000,
+          style: { background: "#0f1e35", color: "white", border: "1px solid rgba(251,191,36,0.3)", borderRadius: "16px" },
+          icon: "🏆",
+        });
+        refreshNavNotifs();
+      }
+    };
+
+    const xpUpdatedHandler = (data) => {
+      if (data.leveledUp) {
+        toast(`📈 Level Up! You reached Level ${data.level}!`, {
+          duration: 5000,
+          style: { background: "#0f1e35", color: "white", border: "1px solid rgba(251,191,36,0.3)", borderRadius: "16px" },
+        });
+        refreshNavNotifs();
+      }
+    };
+
+    const announcementHandler = (data) => {
+      toast(`📢 New announcement: ${data.announcementTitle || "Course announcement"}`, {
+        duration: 6000,
+        style: { background: "#0f1e35", color: "white", border: "1px solid rgba(56,189,248,0.3)", borderRadius: "16px" },
+      });
+      refreshNavNotifs();
+    };
+
+    const replyToPostHandler = (data) => {
+      toast(`💬 ${data.replierName} replied to ${data.postTitle}`, {
+        duration: 4000,
+        style: { background: "#0f1e35", color: "white", border: "1px solid rgba(255,255,255,0.12)", borderRadius: "16px" },
+      });
+      refreshNavNotifs();
+    };
+
+    const jobPostedHandler = (data) => {
+      toast(`💼 New ${data.type || "job"}: ${data.title} at ${data.company}`, {
+        duration: 6000,
+        style: { background: "#0f1e35", color: "white", border: "1px solid rgba(56,189,248,0.25)", borderRadius: "16px" },
+        icon: "💼",
+      });
+    };
+
+    const applicationUpdatedHandler = (data) => {
+      toast(`🎯 Application update: ${data.jobTitle} — ${data.status}`, {
+        duration: 5000,
+        style: { background: "#0f1e35", color: "white", border: "1px solid rgba(167,139,250,0.25)", borderRadius: "16px" },
+      });
+      refreshNavNotifs();
+    };
+
     socket.on("live-class-started", startedHandler);
     socket.on("live-class-scheduled", scheduledHandler);
+    socket.on("assignment-created", assignmentCreatedHandler);
+    socket.on("assignment-graded", assignmentGradedHandler);
+    socket.on("badge-unlocked", badgeUnlockedHandler);
+    socket.on("xp-updated", xpUpdatedHandler);
+    socket.on("announcement-created", announcementHandler);
+    socket.on("reply-to-post", replyToPostHandler);
+    socket.on("job-posted", jobPostedHandler);
+    socket.on("application-updated", applicationUpdatedHandler);
     return () => {
       socket.off("live-class-started", startedHandler);
       socket.off("live-class-scheduled", scheduledHandler);
+      socket.off("assignment-created", assignmentCreatedHandler);
+      socket.off("assignment-graded", assignmentGradedHandler);
+      socket.off("badge-unlocked", badgeUnlockedHandler);
+      socket.off("xp-updated", xpUpdatedHandler);
+      socket.off("announcement-created", announcementHandler);
+      socket.off("reply-to-post", replyToPostHandler);
+      socket.off("job-posted", jobPostedHandler);
+      socket.off("application-updated", applicationUpdatedHandler);
     };
   }, [role]);
 

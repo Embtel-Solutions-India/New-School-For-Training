@@ -3,6 +3,7 @@ import {
   Bell,
   BookOpen,
   Bot,
+  Briefcase,
   CalendarClock,
   CheckCircle2,
   ClipboardCheck,
@@ -29,6 +30,7 @@ import {
   Users,
   Video,
   Bookmark,
+  MessagesSquare,
 } from "lucide-react";
 
 export const roles = {
@@ -64,6 +66,8 @@ export const roleMenus = {
     { label: "Notifications", icon: Bell, section: "s-notifications" },
     { label: "Bookmarks", icon: Bookmark, section: "s-bookmarks" },
     { label: "Downloads", icon: Download, section: "s-downloads" },
+    { label: "Course Communities", icon: MessagesSquare, section: "s-community" },
+    { label: "Placement Cell", icon: Briefcase, section: "s-placement" },
     { label: "Profile Settings", icon: UserCog, section: "s-profile" },
     { label: "AI Learning Assistant", icon: Bot, section: "s-ai-assistant" },
   ],
@@ -82,6 +86,7 @@ export const roleMenus = {
     { label: "Content Analytics", icon: BarChart3, section: "t-analytics" },
     { label: "Discussion Moderation", icon: MessageSquare, section: "t-discussions" },
     { label: "Blog Management", icon: Newspaper, section: "t-blogs" },
+    { label: "Job Postings", icon: Briefcase, section: "t-jobs" },
   ],
   admin: [
     { label: "Dashboard Overview", icon: Gauge, section: "overview" },

@@ -16,6 +16,7 @@ import PrivacyPolicy from "./components/Common/PrivacyPolicy";
 import TermAndConditions from "./components/Common/TermAndConditions";
 import ScrollToTop from "./components/Common/ScrollToTop";
 import HelpCenterPage from "./components/Common/HelpCenterPage";
+import CertificateVerifyPage from "./pages/CertificateVerifyPage";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import VerifyEmail from "./pages/VerifyEmail";
@@ -84,6 +85,7 @@ useEffect(() => {
         <Route path="/privacy" element={<PrivacyPolicy />} />
         <Route path="/terms" element={<TermAndConditions />} />
         <Route path="/help" element={<HelpCenterPage />} />
+        <Route path="/certificate/verify/:certId" element={<CertificateVerifyPage />} />
       </Routes>
     </BrowserRouter>
   );

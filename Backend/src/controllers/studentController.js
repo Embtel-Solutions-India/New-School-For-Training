@@ -15,6 +15,11 @@ import Certificate from "../models/Certificate.js";
 import ApiError from "../utils/ApiError.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import { sendEnrollmentEmail, sendCompletionEmail, sendCertificateEmail, buildClientUrl } from "../services/emailService.js";
+import { awardXP, getUserXP, getLevelFromXP, getNextLevelXP, BADGE_DEFS } from "../services/xpService.js";
+import UserXP from "../models/UserXP.js";
+import ActivityLog from "../models/ActivityLog.js";
+import { generateAIAvatarUrl } from "../services/avatarService.js";
+import { emitToUsers } from "../services/socketService.js";
 
 const oid = (id) => new mongoose.Types.ObjectId(id);
 
@@ -92,10 +97,12 @@ export const getStudentOverview = asyncHandler(async (req, res) => {
     { $sort: { _id: 1 } },
   ]);
 
-  // Achievement XP
+  // XP — use real persisted value when available, fall back to calculated
   const baseXP = enrollments.reduce((s, e) => s + Math.floor((e.progress || 0) * 10), 0);
   const quizXP = Math.floor(xpResult[0]?.totalXP || 0);
-  const achievementPoints = baseXP + quizXP + certCount * 500;
+  const calculatedXP = baseXP + quizXP + certCount * 500;
+  const userXPRecord = await UserXP.findOne({ user: studentId }).select("totalXP level").lean();
+  const achievementPoints = userXPRecord?.totalXP > 0 ? userXPRecord.totalXP : calculatedXP;
 
   // Recent activity
   const recentActivity = recentCompletions.slice(0, 5).map((lc) => ({
@@ -289,19 +296,60 @@ export const markLessonComplete = asyncHandler(async (req, res) => {
   const progress = Math.min(100, Math.round((completedCount / totalLessons) * 100));
 
   enrollment.progress = progress;
+
+  // ── Certificate at 80% (issued once, upsert prevents duplicates) ──────────
+  let certIssuedNow = false;
+  if (progress >= 80) {
+    const existingCert = await Certificate.findOne({ student: req.user._id, course: courseId });
+    if (!existingCert) {
+      certIssuedNow = true;
+      const certId = `CERT-${Date.now()}-${req.user._id.toString().slice(-6)}-${courseId.toString().slice(-4)}`;
+      await Certificate.create({
+        student: req.user._id,
+        course: courseId,
+        enrollment: enrollment._id,
+        certificateId: certId,
+        issuedAt: new Date(),
+      });
+      // Fire-and-forget: certificate emails + notifications
+      (async () => {
+        try {
+          const [fullCourse, student] = await Promise.all([
+            Course.findById(courseId).select("title teacher").populate("teacher", "name").lean(),
+            User.findById(req.user._id).select("name email").lean(),
+          ]);
+          if (!fullCourse || !student) return;
+          const teacherId = fullCourse.teacher?._id || req.user._id;
+          await Promise.allSettled([
+            sendCertificateEmail({
+              to: student.email,
+              studentName: student.name,
+              courseTitle: fullCourse.title,
+              certificateId: certId,
+              downloadUrl: buildClientUrl("/dashboard"),
+              verifyUrl: buildClientUrl("/dashboard"),
+            }),
+            Notification.create({
+              title: "📜 Certificate Issued!",
+              message: `Your certificate for "${fullCourse.title}" is ready. ID: ${certId}`,
+              type: "success",
+              targetAudience: "specific",
+              targetUsers: [req.user._id],
+              sentBy: teacherId,
+              isActive: true,
+            }),
+          ]);
+        } catch (_) {}
+      })();
+    }
+  }
+
+  // ── Course completion at 100% ─────────────────────────────────────────────
   if (progress === 100 && !enrollment.isCompleted) {
     enrollment.isCompleted = true;
     enrollment.completedAt = new Date();
     enrollment.status = "completed";
-    // Auto-issue certificate
-    const certId = `CERT-${Date.now()}-${req.user._id.toString().slice(-6)}-${courseId.toString().slice(-4)}`;
-    await Certificate.findOneAndUpdate(
-      { student: req.user._id, course: courseId },
-      { student: req.user._id, course: courseId, enrollment: enrollment._id, certificateId: certId, issuedAt: new Date() },
-      { upsert: true, new: true }
-    );
-
-    // Fire-and-forget: emails + notifications on completion
+    // Fire-and-forget: completion email + notification
     (async () => {
       try {
         const [fullCourse, student] = await Promise.all([
@@ -310,39 +358,18 @@ export const markLessonComplete = asyncHandler(async (req, res) => {
         ]);
         if (!fullCourse || !student) return;
         const teacherId = fullCourse.teacher?._id || req.user._id;
-        const dashboardUrl = buildClientUrl("/dashboard");
-        const downloadUrl = buildClientUrl(`/dashboard`);
-        const verifyUrl = buildClientUrl(`/dashboard`);
-
         await Promise.allSettled([
           sendCompletionEmail({
             to: student.email,
             studentName: student.name,
             courseTitle: fullCourse.title,
             instructorName: fullCourse.teacher?.name || "",
-            dashboardUrl,
-          }),
-          sendCertificateEmail({
-            to: student.email,
-            studentName: student.name,
-            courseTitle: fullCourse.title,
-            certificateId: certId,
-            downloadUrl,
-            verifyUrl,
+            dashboardUrl: buildClientUrl("/dashboard"),
           }),
           Notification.create({
-            title: "Course Completed!",
-            message: `Congratulations! You completed "${fullCourse.title}". Your certificate is ready.`,
+            title: "🎉 Course Completed!",
+            message: `Congratulations! You completed "${fullCourse.title}".`,
             type: "success",
-            targetAudience: "specific",
-            targetUsers: [req.user._id],
-            sentBy: teacherId,
-            isActive: true,
-          }),
-          Notification.create({
-            title: "Certificate Issued",
-            message: `Your certificate for "${fullCourse.title}" has been issued. ID: ${certId}`,
-            type: "info",
             targetAudience: "specific",
             targetUsers: [req.user._id],
             sentBy: teacherId,
@@ -352,7 +379,19 @@ export const markLessonComplete = asyncHandler(async (req, res) => {
       } catch (_) {}
     })();
   }
+
   await enrollment.save();
+
+  // ── XP + activity (fire-and-forget) ──────────────────────────────────────
+  awardXP(req.user._id, 10, `lesson:${lessonId}:${courseId}`, "lesson").catch(() => {});
+  ActivityLog.create({ user: req.user._id, type: "lesson_complete", description: "Completed a lesson", metadata: { lessonId, courseId } }).catch(() => {});
+  if (progress === 100) {
+    awardXP(req.user._id, 100, `course:${courseId}`, "course").catch(() => {});
+    ActivityLog.create({ user: req.user._id, type: "course_complete", description: "Completed a course", metadata: { courseId } }).catch(() => {});
+  } else if (certIssuedNow) {
+    awardXP(req.user._id, 100, `course:${courseId}`, "course").catch(() => {});
+    ActivityLog.create({ user: req.user._id, type: "certificate", description: "Earned a certificate", metadata: { courseId } }).catch(() => {});
+  }
 
   res.json({ success: true, progress, completedCount, totalLessons });
 });
@@ -539,6 +578,10 @@ export const submitAssignment = asyncHandler(async (req, res) => {
   );
 
   res.json({ success: true, submission });
+
+  // Award XP + log activity (fire-and-forget)
+  awardXP(req.user._id, 25, `assignment:${assignmentId}:${courseId}`, "assignment").catch(() => {});
+  ActivityLog.create({ user: req.user._id, type: "assignment_submit", description: "Submitted an assignment", metadata: { assignmentId, courseId } }).catch(() => {});
 });
 
 // ─────────────────────── QUIZZES ───────────────────────
@@ -565,6 +608,34 @@ export const getQuizHistory = asyncHandler(async (req, res) => {
   ]);
 
   res.json({ success: true, attempts, pagination: { total, page: parseInt(page), pages: Math.ceil(total / parseInt(limit)) }, stats: stats[0] || {} });
+});
+
+export const getAvailableQuizzes = asyncHandler(async (req, res) => {
+  const enrollments = await Enrollment.find({ user: req.user._id, status: "active" })
+    .select("course")
+    .lean();
+  const courseIds = enrollments.map((e) => e.course);
+
+  const courses = await Course.find({ _id: { $in: courseIds } })
+    .select("title thumbnail curriculum.quizzes")
+    .lean();
+
+  const quizzes = [];
+  for (const course of courses) {
+    for (const quiz of (course.curriculum?.quizzes || [])) {
+      quizzes.push({
+        _id: quiz._id,
+        title: quiz.title,
+        description: quiz.description,
+        timeLimit: quiz.timeLimit,
+        passingScore: quiz.passingScore,
+        questionCount: quiz.questions?.length || 0,
+        course: { _id: course._id, title: course.title, thumbnail: course.thumbnail },
+      });
+    }
+  }
+
+  res.json({ success: true, quizzes });
 });
 
 export const getCourseQuizzes = asyncHandler(async (req, res) => {
@@ -617,49 +688,125 @@ export const submitQuizAttempt = asyncHandler(async (req, res) => {
   });
 
   res.json({ success: true, attempt, score, maxScore, percentage, passed });
+
+  // Award XP + log activity (fire-and-forget, deduped per quiz per course)
+  awardXP(req.user._id, 20, `quiz:${quizId}:${courseId}`, "quiz").catch(() => {});
+  ActivityLog.create({ user: req.user._id, type: "quiz_attempt", description: `Completed a quiz (${percentage}%)`, metadata: { quizId, courseId, passed, percentage } }).catch(() => {});
 });
 
 // ─────────────────────── LEADERBOARD ───────────────────────
 
 export const getLeaderboard = asyncHandler(async (req, res) => {
-  const topStudents = await Enrollment.aggregate([
-    { $match: { status: { $in: ["active", "completed"] } } },
-    {
-      $group: {
-        _id: "$user",
-        totalProgress: { $sum: "$progress" },
-        coursesEnrolled: { $sum: 1 },
-        completedCourses: { $sum: { $cond: ["$isCompleted", 1, 0] } },
-        xp: { $sum: { $multiply: ["$progress", 10] } },
-      },
-    },
-    { $sort: { xp: -1 } },
-    { $limit: 50 },
-    { $lookup: { from: "users", localField: "_id", foreignField: "_id", as: "user" } },
-    { $unwind: "$user" },
-    {
-      $project: {
-        name: "$user.name",
-        avatar: "$user.avatar",
-        xp: 1,
-        coursesEnrolled: 1,
-        completedCourses: 1,
-        totalProgress: 1,
-      },
-    },
-  ]);
+  const { period } = req.query; // "weekly" | "monthly" | undefined (all-time)
 
-  const ranked = topStudents.map((s, i) => ({ ...s, rank: i + 1 }));
-  const myRank = ranked.findIndex((s) => s._id?.toString() === req.user._id.toString()) + 1;
-  const myEntry = ranked.find((s) => s._id?.toString() === req.user._id.toString());
+  let leaderboard, myRank, myEntry;
 
-  res.json({ success: true, leaderboard: ranked.slice(0, 20), myRank: myRank || ranked.length + 1, myEntry });
+  if (period === "weekly" || period === "monthly") {
+    // Use UserXP eventLog to compute period-specific XP
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - (period === "weekly" ? 7 : 30));
+
+    const periodData = await UserXP.aggregate([
+      {
+        $project: {
+          user: 1,
+          periodXP: {
+            $sum: {
+              $map: {
+                input: {
+                  $filter: {
+                    input: "$eventLog",
+                    as: "e",
+                    cond: { $gte: ["$$e.awardedAt", cutoff] },
+                  },
+                },
+                as: "e",
+                in: 10, // approximate: each event = 10 XP for ranking purposes
+              },
+            },
+          },
+        },
+      },
+      { $match: { periodXP: { $gt: 0 } } },
+      { $sort: { periodXP: -1 } },
+      { $limit: 50 },
+      { $lookup: { from: "users", localField: "user", foreignField: "_id", as: "u" } },
+      { $unwind: "$u" },
+      {
+        $project: {
+          _id: "$user",
+          name: "$u.name",
+          avatar: "$u.avatar",
+          xp: "$periodXP",
+          coursesEnrolled: 0,
+          completedCourses: 0,
+        },
+      },
+    ]);
+
+    leaderboard = periodData.map((s, i) => ({ ...s, rank: i + 1 }));
+    myRank = leaderboard.findIndex((s) => s._id?.toString() === req.user._id.toString()) + 1;
+    myEntry = leaderboard.find((s) => s._id?.toString() === req.user._id.toString());
+  } else {
+    // All-time: use Enrollment-based XP blended with UserXP
+    const [enrollData, userXPMap] = await Promise.all([
+      Enrollment.aggregate([
+        { $match: { status: { $in: ["active", "completed"] } } },
+        {
+          $group: {
+            _id: "$user",
+            totalProgress: { $sum: "$progress" },
+            coursesEnrolled: { $sum: 1 },
+            completedCourses: { $sum: { $cond: ["$isCompleted", 1, 0] } },
+            xp: { $sum: { $multiply: ["$progress", 10] } },
+          },
+        },
+        { $sort: { xp: -1 } },
+        { $limit: 50 },
+        { $lookup: { from: "users", localField: "_id", foreignField: "_id", as: "user" } },
+        { $unwind: "$user" },
+        {
+          $project: {
+            name: "$user.name",
+            avatar: "$user.avatar",
+            xp: 1,
+            coursesEnrolled: 1,
+            completedCourses: 1,
+            totalProgress: 1,
+          },
+        },
+      ]),
+      UserXP.find({}).select("user totalXP level").lean().then((docs) =>
+        new Map(docs.map((d) => [d.user.toString(), d]))
+      ),
+    ]);
+
+    // Blend: use UserXP.totalXP when it exists and is higher
+    const blended = enrollData.map((s) => {
+      const xpRecord = userXPMap.get(s._id?.toString());
+      const realXP = xpRecord?.totalXP || 0;
+      return { ...s, xp: realXP > s.xp ? realXP : s.xp, level: xpRecord?.level };
+    });
+
+    blended.sort((a, b) => b.xp - a.xp);
+    leaderboard = blended.map((s, i) => ({ ...s, rank: i + 1 }));
+    myRank = leaderboard.findIndex((s) => s._id?.toString() === req.user._id.toString()) + 1;
+    myEntry = leaderboard.find((s) => s._id?.toString() === req.user._id.toString());
+  }
+
+  res.json({
+    success: true,
+    leaderboard: leaderboard.slice(0, 20),
+    myRank: myRank || leaderboard.length + 1,
+    myEntry: myEntry || null,
+    period: period || "all",
+  });
 });
 
 export const getMyAchievements = asyncHandler(async (req, res) => {
   const studentId = req.user._id;
 
-  const [enrollments, certs, quizStats, lessonsCompleted] = await Promise.all([
+  const [enrollments, certs, quizStats, lessonsCompleted, userXP] = await Promise.all([
     Enrollment.find({ user: studentId }).lean(),
     Certificate.countDocuments({ student: studentId }),
     QuizAttempt.aggregate([
@@ -667,30 +814,81 @@ export const getMyAchievements = asyncHandler(async (req, res) => {
       { $group: { _id: null, total: { $sum: 1 }, passed: { $sum: { $cond: ["$passed", 1, 0] } }, avgScore: { $avg: "$percentage" } } },
     ]),
     LessonCompletion.countDocuments({ student: studentId }),
+    getUserXP(studentId),
   ]);
 
   const completedCourses = enrollments.filter((e) => e.isCompleted).length;
-  const xp = enrollments.reduce((s, e) => s + Math.floor((e.progress || 0) * 10), 0) + certs * 500;
 
-  const badges = [];
-  if (lessonsCompleted >= 1) badges.push({ id: "first_lesson", label: "First Step", icon: "🎯", desc: "Completed first lesson" });
-  if (lessonsCompleted >= 10) badges.push({ id: "ten_lessons", label: "Momentum", icon: "⚡", desc: "10 lessons completed" });
-  if (lessonsCompleted >= 50) badges.push({ id: "fifty_lessons", label: "Scholar", icon: "📚", desc: "50 lessons completed" });
-  if (completedCourses >= 1) badges.push({ id: "first_course", label: "Graduate", icon: "🎓", desc: "First course completed" });
-  if (completedCourses >= 3) badges.push({ id: "three_courses", label: "Achiever", icon: "🏆", desc: "3 courses completed" });
-  if (certs >= 1) badges.push({ id: "first_cert", label: "Certified", icon: "📜", desc: "Earned first certificate" });
-  if (quizStats[0]?.passed >= 5) badges.push({ id: "quiz_master", label: "Quiz Master", icon: "🧠", desc: "Passed 5 quizzes" });
+  // Use real persisted XP when available, fall back to calculated
+  const calculatedXP = enrollments.reduce((s, e) => s + Math.floor((e.progress || 0) * 10), 0) + certs * 500;
+  const xp = userXP.totalXP > 0 ? userXP.totalXP : calculatedXP;
+
+  // Build badge list: merge persisted badges + earned-by-count badges
+  const unlockedKeys = new Set(userXP.unlockedBadges || []);
+
+  // Retroactively check count-based badges for users who earned them before XP system
+  if (lessonsCompleted >= 1)  unlockedKeys.add("first_lesson");
+  if (lessonsCompleted >= 10) unlockedKeys.add("ten_lessons");
+  if (lessonsCompleted >= 50) unlockedKeys.add("fifty_lessons");
+  if (completedCourses >= 1)  unlockedKeys.add("first_course");
+  if (completedCourses >= 3)  unlockedKeys.add("three_courses");
+  if (certs >= 1)             unlockedKeys.add("first_cert");
+  if (quizStats[0]?.passed >= 5) unlockedKeys.add("quiz_master");
+  if (xp >= 1000)             unlockedKeys.add("xp_1000");
+
+  const badges = BADGE_DEFS
+    .filter((b) => unlockedKeys.has(b.key))
+    .map((b) => ({ id: b.key, label: b.label, icon: b.icon, desc: b.desc }));
 
   res.json({
     success: true,
     achievements: {
       xp,
+      level: userXP.level || getLevelFromXP(xp),
+      streak: userXP.streak || 0,
       badges,
       completedCourses,
       certificates: certs,
       lessonsCompleted,
       quizAttempts: quizStats[0]?.total || 0,
       quizPassed: quizStats[0]?.passed || 0,
+    },
+  });
+});
+
+// ── Get XP profile (for profile page) ────────────────────────────────────────
+export const getXpProfile = asyncHandler(async (req, res) => {
+  const studentId = req.user._id;
+
+  const [userXP, enrollments, certs] = await Promise.all([
+    getUserXP(studentId),
+    Enrollment.find({ user: studentId }).lean(),
+    Certificate.countDocuments({ student: studentId }),
+  ]);
+
+  const calculatedXP = enrollments.reduce((s, e) => s + Math.floor((e.progress || 0) * 10), 0) + certs * 500;
+  const totalXP = userXP.totalXP > 0 ? userXP.totalXP : calculatedXP;
+  const level = userXP.level || getLevelFromXP(totalXP);
+  const nextLevelXP = getNextLevelXP(level);
+  const currentLevelXP = getNextLevelXP(level - 1) || 0;
+  const progressInLevel = Math.max(0, totalXP - currentLevelXP);
+  const xpNeeded = Math.max(1, nextLevelXP - currentLevelXP);
+  const levelProgress = Math.min(100, Math.round((progressInLevel / xpNeeded) * 100));
+
+  const unlockedKeys = new Set(userXP.unlockedBadges || []);
+  const badges = BADGE_DEFS
+    .filter((b) => unlockedKeys.has(b.key))
+    .map((b) => ({ key: b.key, label: b.label, icon: b.icon, desc: b.desc }));
+
+  res.json({
+    success: true,
+    xpProfile: {
+      totalXP,
+      level,
+      nextLevelXP,
+      levelProgress,
+      streak: userXP.streak || 0,
+      badges,
     },
   });
 });
@@ -836,20 +1034,60 @@ export const getStudentProfile = asyncHandler(async (req, res) => {
     Enrollment.countDocuments({ user: req.user._id }),
     Certificate.countDocuments({ student: req.user._id }),
   ]);
-  res.json({ success: true, profile: { ...user, enrollmentCount: enrollments, certificateCount: certs } });
+  res.json({ success: true, user: { ...user, enrollmentCount: enrollments, certCount: certs } });
 });
 
 export const updateStudentProfile = asyncHandler(async (req, res) => {
-  const { name, bio, avatar, socialLinks } = req.body;
-  const update = {};
+  const { name, bio, avatar, socialLinks, skills, interests, learningGoals, portfolio, preferredLanguage } = req.body;
+  const update = { profileLastUpdated: new Date() };
   if (name) update.name = name;
   if (bio !== undefined) update.bio = bio;
   if (avatar !== undefined) update.avatar = avatar;
   if (socialLinks) update.socialLinks = socialLinks;
+  if (Array.isArray(skills)) update.skills = skills.slice(0, 20);
+  if (Array.isArray(interests)) update.interests = interests.slice(0, 20);
+  if (Array.isArray(learningGoals)) update.learningGoals = learningGoals.slice(0, 10);
+  if (portfolio !== undefined) update.portfolio = portfolio;
+  if (preferredLanguage && ["en", "hi", "es", "fr"].includes(preferredLanguage)) update.preferredLanguage = preferredLanguage;
 
   const user = await User.findByIdAndUpdate(req.user._id, update, { new: true, runValidators: true })
     .select("-password -refreshToken");
-  res.json({ success: true, profile: user });
+
+  ActivityLog.create({ user: req.user._id, type: "profile_update", description: "Updated profile information", metadata: {} }).catch(() => {});
+  emitToUsers([req.user._id.toString()], "profile-updated", { userId: req.user._id });
+
+  res.json({ success: true, user });
+});
+
+export const generateAIAvatar = asyncHandler(async (req, res) => {
+  const userId = req.user._id;
+  const user = await User.findById(userId).select("name skills interests learningGoals").lean();
+  const completedCourses = await Enrollment.countDocuments({ user: userId, isCompleted: true });
+
+  const { avatarUrl, promptSummary } = await generateAIAvatarUrl({
+    name: user.name,
+    skills: user.skills || [],
+    interests: user.interests || [],
+    learningGoals: user.learningGoals || [],
+    completedCourses,
+  });
+
+  await User.findByIdAndUpdate(userId, { avatar: avatarUrl, aiAvatarPrompt: promptSummary, profileLastUpdated: new Date() });
+  ActivityLog.create({ user: userId, type: "avatar_generate", description: "Generated AI avatar", metadata: { promptSummary } }).catch(() => {});
+  emitToUsers([userId.toString()], "avatar-generated", { avatarUrl });
+
+  res.json({ success: true, avatarUrl, promptSummary });
+});
+
+export const getStudentActivity = asyncHandler(async (req, res) => {
+  const { limit = 20, page = 1 } = req.query;
+  const skip = (parseInt(page) - 1) * parseInt(limit);
+  const logs = await ActivityLog.find({ user: req.user._id })
+    .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(parseInt(limit))
+    .lean();
+  res.json({ success: true, activity: logs });
 });
 
 export const changeStudentPassword = asyncHandler(async (req, res) => {
@@ -949,6 +1187,10 @@ export const joinLiveClass = asyncHandler(async (req, res) => {
   await LiveClass.findByIdAndUpdate(cls._id, { attendanceCount: count });
 
   res.json({ success: true, meetingLink: cls.meetingLink });
+
+  // Award XP + log activity (fire-and-forget, deduped per session)
+  awardXP(req.user._id, 15, `live:${cls._id}`, "live").catch(() => {});
+  ActivityLog.create({ user: req.user._id, type: "live_class", description: "Attended a live class", metadata: { liveClassId: cls._id.toString() } }).catch(() => {});
 });
 
 export const leaveLiveClass = asyncHandler(async (req, res) => {

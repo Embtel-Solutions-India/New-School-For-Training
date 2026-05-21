@@ -2,9 +2,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Skeleton } from "@mui/material";
 import {
-  Bot, ChevronDown, Clock, MessageSquare, Plus, Send, Sparkles, Trash2, X,
+  Bot, ChevronDown, Clock, MessageSquare, Mic, MicOff, Plus, Send, Sparkles, Trash2, X,
 } from "lucide-react";
 import toast from "react-hot-toast";
+import { useTranslation } from "react-i18next";
 import aiApi from "../../services/aiApi";
 import studentApi from "../../services/studentApi";
 
@@ -17,6 +18,13 @@ const SUGGESTIONS = [
   { label: "Key takeaways", prompt: "What are the most important things I should remember from this lesson?" },
   { label: "Study tips", prompt: "Give me effective study tips for mastering this course material." },
 ];
+
+// Map i18n language code → Web Speech API lang tag
+const SPEECH_LANG_MAP = { en: "en-US", hi: "hi-IN", es: "es-ES", fr: "fr-FR" };
+
+const hasSpeechSupport = () =>
+  typeof window !== "undefined" &&
+  !!(window.SpeechRecognition || window.webkitSpeechRecognition);
 
 const TypingIndicator = () => (
   <div className="flex justify-start">
@@ -64,6 +72,7 @@ const MessageBubble = ({ msg, i }) => (
 );
 
 const StudentAIAssistant = () => {
+  const { t } = useTranslation();
   const [sessions, setSessions] = useState([]);
   const [historyLoading, setHistoryLoading] = useState(true);
   const [sessionId, setSessionId] = useState(null);
@@ -79,13 +88,19 @@ const StudentAIAssistant = () => {
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
 
+  // Voice state
+  const [isListening, setIsListening] = useState(false);
+  const [transcript, setTranscript] = useState("");
+  const [voiceSupported] = useState(hasSpeechSupport);
+  const recognitionRef = useRef(null);
+  const preferredLanguage = localStorage.getItem("preferredLanguage") || "en";
+
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, []);
 
   useEffect(() => { scrollToBottom(); }, [messages, sending, scrollToBottom]);
 
-  // Load chat history + enrollments on mount
   useEffect(() => {
     aiApi.getHistory()
       .then(({ data }) => setSessions(data.sessions || []))
@@ -96,7 +111,6 @@ const StudentAIAssistant = () => {
       .catch(() => {});
   }, []);
 
-  // Load lessons when course changes
   useEffect(() => {
     if (!courseId) { setLessons([]); setLessonId(""); return; }
     setLessonsLoading(true);
@@ -106,6 +120,16 @@ const StudentAIAssistant = () => {
       .catch(() => setLessons([]))
       .finally(() => setLessonsLoading(false));
   }, [courseId]);
+
+  // Cleanup recognition on unmount
+  useEffect(() => {
+    return () => {
+      if (recognitionRef.current) {
+        recognitionRef.current.abort();
+        recognitionRef.current = null;
+      }
+    };
+  }, []);
 
   const startNewChat = () => {
     setSessionId(null);
@@ -140,6 +164,7 @@ const StudentAIAssistant = () => {
     const msg = (text || input).trim();
     if (!msg || sending) return;
     setInput("");
+    setTranscript("");
     setSending(true);
 
     const userMsg = { role: "user", content: msg, timestamp: new Date() };
@@ -151,11 +176,11 @@ const StudentAIAssistant = () => {
         sessionId,
         courseId: courseId || undefined,
         lessonId: lessonId || undefined,
+        preferredLanguage,
       });
       setSessionId(data.sessionId);
       setMessages(data.messages);
 
-      // Update sessions sidebar
       setSessions((prev) => {
         const existing = prev.find((s) => s.sessionId === data.sessionId);
         if (existing) {
@@ -167,7 +192,7 @@ const StudentAIAssistant = () => {
     } catch (err) {
       const errMsg = err?.response?.data?.message || "AI assistant temporarily unavailable. Please try again.";
       toast.error(errMsg);
-      setMessages((prev) => prev.slice(0, -1)); // remove optimistic user message
+      setMessages((prev) => prev.slice(0, -1));
       setInput(msg);
     } finally {
       setSending(false);
@@ -177,6 +202,65 @@ const StudentAIAssistant = () => {
 
   const handleKeyDown = (e) => {
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+  };
+
+  const startListening = () => {
+    if (!voiceSupported) {
+      toast.error(t("voice_not_supported"));
+      return;
+    }
+    if (isListening) {
+      recognitionRef.current?.stop();
+      return;
+    }
+
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const recognition = new SpeechRecognition();
+    recognition.lang = SPEECH_LANG_MAP[preferredLanguage] || "en-US";
+    recognition.continuous = false;
+    recognition.interimResults = true;
+    recognition.maxAlternatives = 1;
+
+    recognition.onstart = () => setIsListening(true);
+
+    recognition.onresult = (event) => {
+      let interimText = "";
+      let finalText = "";
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const t = event.results[i][0].transcript;
+        if (event.results[i].isFinal) finalText += t;
+        else interimText += t;
+      }
+      setTranscript(finalText || interimText);
+    };
+
+    recognition.onend = () => {
+      setIsListening(false);
+      recognitionRef.current = null;
+    };
+
+    recognition.onerror = (event) => {
+      setIsListening(false);
+      recognitionRef.current = null;
+      if (event.error !== "aborted") {
+        toast.error("Voice recognition error: " + event.error);
+      }
+    };
+
+    recognitionRef.current = recognition;
+    recognition.start();
+  };
+
+  const useTranscriptAsInput = () => {
+    if (transcript.trim()) {
+      setInput(transcript.trim());
+      setTranscript("");
+      inputRef.current?.focus();
+    }
+  };
+
+  const sendTranscriptDirectly = () => {
+    if (transcript.trim()) sendMessage(transcript.trim());
   };
 
   const selectedCourse = enrollments.find((en) => en.course?._id === courseId)?.course;
@@ -192,7 +276,7 @@ const StudentAIAssistant = () => {
               <Bot size={28} className="text-violet-300" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold sm:text-4xl">AI Learning Assistant</h1>
+              <h1 className="text-3xl font-bold sm:text-4xl">{t("ai_assistant")}</h1>
               <p className="mt-1 text-white/60">Powered by Gemini — ask anything about your courses</p>
             </div>
           </div>
@@ -201,6 +285,12 @@ const StudentAIAssistant = () => {
               <p className="text-lg font-bold text-violet-300">{sessions.length}</p>
               <p className="text-xs text-white/50">Saved Chats</p>
             </div>
+            {voiceSupported && (
+              <div className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-2 text-center">
+                <Mic size={16} className="mx-auto text-emerald-300 mb-0.5" />
+                <p className="text-xs text-white/50">Voice On</p>
+              </div>
+            )}
           </div>
         </div>
       </motion.div>
@@ -209,12 +299,12 @@ const StudentAIAssistant = () => {
         {/* Sessions Sidebar */}
         <div className={`rounded-[24px] ${glass} p-4 xl:max-h-[700px] xl:overflow-hidden xl:flex xl:flex-col`}>
           <div className="flex items-center justify-between mb-3">
-            <p className="text-sm font-semibold text-white/60">Recent Chats</p>
+            <p className="text-sm font-semibold text-white/60">{t("recent_chats")}</p>
             <button
               onClick={startNewChat}
               className="flex items-center gap-1.5 rounded-xl bg-violet-500/20 px-3 py-1.5 text-xs font-semibold text-violet-300 hover:bg-violet-500/30 transition"
             >
-              <Plus size={13} /> New Chat
+              <Plus size={13} /> {t("new_chat")}
             </button>
           </div>
           <div className="flex-1 space-y-1 overflow-y-auto no-scrollbar">
@@ -270,7 +360,7 @@ const StudentAIAssistant = () => {
               onChange={(e) => setCourseId(e.target.value)}
               className="flex-1 min-w-[160px] rounded-xl border border-white/10 bg-white/[0.05] px-3 py-1.5 text-xs text-white/70 outline-none focus:border-violet-400/40 transition"
             >
-              <option value="">No course context</option>
+              <option value="">{t("select_course")}</option>
               {enrollments.map((en) => (
                 <option key={en._id} value={en.course?._id}>{en.course?.title}</option>
               ))}
@@ -282,7 +372,7 @@ const StudentAIAssistant = () => {
                 disabled={lessonsLoading}
                 className="flex-1 min-w-[160px] rounded-xl border border-white/10 bg-white/[0.05] px-3 py-1.5 text-xs text-white/70 outline-none focus:border-violet-400/40 transition disabled:opacity-40"
               >
-                <option value="">No lesson context</option>
+                <option value="">{t("select_lesson")}</option>
                 {lessons.map((l) => (
                   <option key={l._id} value={l._id}>{l.title}</option>
                 ))}
@@ -306,8 +396,13 @@ const StudentAIAssistant = () => {
                 <div className="grid h-16 w-16 place-items-center rounded-2xl bg-violet-500/15 mb-4">
                   <Sparkles size={28} className="text-violet-300" />
                 </div>
-                <p className="text-white/60 font-medium">Ask anything about your courses</p>
+                <p className="text-white/60 font-medium">{t("ask_anything")}</p>
                 <p className="mt-1 text-xs text-white/35">Select a course context above for better answers</p>
+                {voiceSupported && (
+                  <p className="mt-1 text-xs text-emerald-400/60">
+                    🎤 Click the mic button to use voice input
+                  </p>
+                )}
                 <div className="mt-6 flex flex-wrap justify-center gap-2 max-w-lg">
                   {SUGGESTIONS.map((s) => (
                     <button
@@ -328,6 +423,47 @@ const StudentAIAssistant = () => {
               </>
             )}
           </div>
+
+          {/* Voice transcript preview */}
+          <AnimatePresence>
+            {transcript && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                className="border-t border-emerald-400/20 bg-emerald-400/5 px-4 py-3"
+              >
+                <div className="flex items-start gap-3">
+                  <Mic size={14} className="mt-0.5 shrink-0 text-emerald-400" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[11px] font-semibold text-emerald-400/70 mb-1">{t("transcript_preview")}</p>
+                    <p className="text-sm text-white/80 leading-snug">{transcript}</p>
+                  </div>
+                  <div className="flex shrink-0 gap-2">
+                    <button
+                      onClick={useTranscriptAsInput}
+                      className="rounded-lg border border-white/10 bg-white/[0.06] px-2.5 py-1 text-[11px] text-white/60 hover:bg-white/[0.12] hover:text-white transition"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={sendTranscriptDirectly}
+                      disabled={sending}
+                      className="rounded-lg bg-emerald-500/20 px-2.5 py-1 text-[11px] font-semibold text-emerald-300 hover:bg-emerald-500/30 transition disabled:opacity-40"
+                    >
+                      {t("use_transcript")}
+                    </button>
+                    <button
+                      onClick={() => setTranscript("")}
+                      className="rounded-lg px-1.5 py-1 text-white/30 hover:text-white/60 transition"
+                    >
+                      <X size={12} />
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* Input */}
           <div className="border-t border-white/10 p-4">
@@ -357,6 +493,32 @@ const StudentAIAssistant = () => {
                 className="flex-1 resize-none rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3 text-sm text-white outline-none placeholder:text-white/30 focus:border-violet-400/40 transition disabled:opacity-50"
                 style={{ maxHeight: 120, overflow: "auto" }}
               />
+
+              {/* Mic button */}
+              {voiceSupported && (
+                <button
+                  onClick={startListening}
+                  disabled={sending}
+                  title={isListening ? t("listening") : t("voice_input")}
+                  className={`grid h-12 w-12 shrink-0 place-items-center self-end rounded-2xl transition disabled:opacity-40 ${
+                    isListening
+                      ? "bg-red-500/30 text-red-300 hover:bg-red-500/40"
+                      : "bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/25"
+                  }`}
+                >
+                  {isListening ? (
+                    <motion.div
+                      animate={{ scale: [1, 1.2, 1] }}
+                      transition={{ duration: 0.8, repeat: Infinity }}
+                    >
+                      <MicOff size={18} />
+                    </motion.div>
+                  ) : (
+                    <Mic size={18} />
+                  )}
+                </button>
+              )}
+
               <button
                 onClick={() => sendMessage()}
                 disabled={!input.trim() || sending}
@@ -371,6 +533,16 @@ const StudentAIAssistant = () => {
                 )}
               </button>
             </div>
+
+            {isListening && (
+              <motion.p
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="mt-2 text-center text-xs text-emerald-400/70"
+              >
+                🎤 {t("listening")} Click mic to stop.
+              </motion.p>
+            )}
           </div>
         </div>
       </div>

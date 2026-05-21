@@ -1,6 +1,5 @@
 import express from "express";
 import cookieParser from "cookie-parser";
-import cors from "cors";
 import helmet from "helmet";
 import passport from "passport";
 import authRoutes from "./routes/authRoutes.js";
@@ -17,6 +16,8 @@ import checkoutRoutes from "./routes/checkoutRoutes.js";
 import lessonRoutes from "./routes/lessonRoutes.js";
 import certificateRoutes from "./routes/certificateRoutes.js";
 import aiRoutes from "./routes/aiRoutes.js";
+import jobRoutes from "./routes/jobRoutes.js";
+import resumeRoutes from "./routes/resumeRoutes.js";
 import { authLimiter } from "./middleware/rateLimiter.js";
 import { errorHandler, notFound } from "./middleware/errorMiddleware.js";
 
@@ -29,25 +30,26 @@ const allowedOrigins = [
 ].filter(Boolean);
 
 app.set("trust proxy", 1);
-app.use(helmet());
+
+// Explicit CORS middleware — must be first so helmet never touches these headers
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (!origin || allowedOrigins.includes(origin)) {
+    res.setHeader("Access-Control-Allow-Origin", origin || "*");
+    res.setHeader("Access-Control-Allow-Credentials", "true");
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  }
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(204);
+  }
+  next();
+});
+
+app.use(helmet({ crossOriginResourcePolicy: false }));
 
 // Stripe webhook needs raw body BEFORE the global JSON parser
 app.use("/api/checkout/webhook/stripe", express.raw({ type: "application/json" }));
-
-app.use(
-  cors({
-    origin(origin, callback) {
-      if (!origin || allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
-
-      return callback(new Error(`CORS blocked origin: ${origin}`));
-    },
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-  })
-);
 app.use(express.json({ limit: "2mb" }));
 app.use(express.urlencoded({ extended: true, limit: "2mb" }));
 app.use(cookieParser());
@@ -71,6 +73,8 @@ app.use("/api/checkout", checkoutRoutes);
 app.use("/api/lesson", lessonRoutes);
 app.use("/api/certificate", certificateRoutes);
 app.use("/api/ai", aiRoutes);
+app.use("/api/jobs", jobRoutes);
+app.use("/api/resume", resumeRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

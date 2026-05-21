@@ -1,7 +1,15 @@
 import PDFDocument from "pdfkit";
+import QRCode from "qrcode";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
 import asyncHandler from "../utils/asyncHandler.js";
 import Certificate from "../models/Certificate.js";
 import ApiError from "../utils/ApiError.js";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const LOGO_PATH = path.join(__dirname, "../../../Frontend/public/images/sft_logo.png");
+const CLIENT_URL = process.env.CLIENT_URL || "http://localhost:5173";
 
 export const downloadCertificate = asyncHandler(async (req, res) => {
   const cert = await Certificate.findOne({ certificateId: req.params.certId })
@@ -10,15 +18,37 @@ export const downloadCertificate = asyncHandler(async (req, res) => {
     .lean();
 
   if (!cert) throw new ApiError(404, "Certificate not found");
-
-  // Only the certificate owner or admin can download
-  if (
-    req.user.role !== "admin" &&
-    cert.student._id.toString() !== req.user._id.toString()
-  ) {
+  if (req.user.role !== "admin" && cert.student._id.toString() !== req.user._id.toString()) {
     throw new ApiError(403, "Access denied");
   }
 
+  res.setHeader("Content-Type", "application/pdf");
+  res.setHeader("Content-Disposition", `attachment; filename="certificate-${cert.certificateId}.pdf"`);
+  await buildCertificatePDF(cert, res);
+});
+
+export const verifyCertificate = asyncHandler(async (req, res) => {
+  const cert = await Certificate.findOne({ certificateId: req.params.certId })
+    .populate("student", "name")
+    .populate({ path: "course", select: "title teacher", populate: { path: "teacher", select: "name" } })
+    .lean();
+
+  if (!cert) throw new ApiError(404, "Certificate not found");
+
+  res.json({
+    success: true,
+    certificate: {
+      certificateId: cert.certificateId,
+      studentName: cert.student?.name,
+      courseTitle: cert.course?.title,
+      instructorName: cert.course?.teacher?.name,
+      grade: cert.grade,
+      issuedAt: cert.issuedAt,
+    },
+  });
+});
+
+async function buildCertificatePDF(cert, stream) {
   const studentName = cert.student?.name || "Student";
   const courseTitle = cert.course?.title || "Course";
   const instructorName = cert.course?.teacher?.name || "";
@@ -26,97 +56,152 @@ export const downloadCertificate = asyncHandler(async (req, res) => {
     year: "numeric", month: "long", day: "numeric",
   });
   const certId = cert.certificateId;
+  const verifyUrl = `${CLIENT_URL}/certificate/verify/${certId}`;
 
-  res.setHeader("Content-Type", "application/pdf");
-  res.setHeader("Content-Disposition", `attachment; filename="certificate-${certId}.pdf"`);
+  const qrBuffer = await QRCode.toBuffer(verifyUrl, {
+    type: "png",
+    width: 160,
+    margin: 1,
+    color: { dark: "#0d1b2a", light: "#ffffff" },
+  });
 
   const doc = new PDFDocument({ layout: "landscape", size: "A4", margin: 0 });
-  doc.pipe(res);
+  doc.pipe(stream);
 
   const W = doc.page.width;   // 841.89
   const H = doc.page.height;  // 595.28
 
-  // Background
-  doc.rect(0, 0, W, H).fill("#ffffff");
+  // ── BACKGROUND (warm cream)
+  doc.rect(0, 0, W, H).fill("#FFFDF6");
 
-  // Top accent bar
-  doc.rect(0, 0, W, 8).fill("#1d4ed8");
+  // ── OUTER GOLD BORDER (3pt)
+  doc.rect(14, 14, W - 28, H - 28)
+    .lineWidth(3).strokeColor("#B8860B").stroke();
 
-  // Outer border
-  doc.rect(20, 20, W - 40, H - 40)
-    .lineWidth(1.5)
-    .stroke("#e5e7eb");
+  // ── INNER THIN GOLD BORDER (0.8pt)
+  doc.rect(22, 22, W - 44, H - 44)
+    .lineWidth(0.8).strokeColor("#DAA520").stroke();
 
-  // Inner decorative border
-  doc.rect(32, 32, W - 64, H - 64)
-    .lineWidth(0.5)
-    .stroke("#d1d5db");
+  // ── CORNER ORNAMENTS
+  [[14, 14], [W - 20, 14], [14, H - 20], [W - 20, H - 20]].forEach(([x, y]) => {
+    doc.rect(x, y, 6, 6).fill("#B8860B");
+  });
 
-  // Header region background
-  doc.rect(20, 20, W - 40, 90).fill("#1e3a5f");
+  // ── NAVY HEADER BAND
+  doc.rect(14, 14, W - 28, 78).fill("#0d1b2a");
 
-  // Organization name
-  doc.fillColor("#93c5fd")
-    .fontSize(13)
-    .font("Helvetica-Bold")
-    .text("SFT LEARNING", 0, 40, { align: "center" });
+  // ── LOGO
+  let orgTextX = 40;
+  try {
+    if (fs.existsSync(LOGO_PATH)) {
+      doc.image(LOGO_PATH, 32, 21, { width: 54, height: 54 });
+      orgTextX = 97;
+    }
+  } catch { /* degrade gracefully */ }
 
-  // Certificate title
-  doc.fillColor("#ffffff")
-    .fontSize(26)
-    .font("Helvetica-Bold")
-    .text("CERTIFICATE OF COMPLETION", 0, 62, { align: "center" });
+  doc.fillColor("#D4A017").fontSize(15).font("Helvetica-Bold")
+    .text("SFT LEARNING PLATFORM", orgTextX, 30, { lineBreak: false });
+  doc.fillColor("#aab0bb").fontSize(9).font("Helvetica")
+    .text("schoolfortraining.com  ·  Excellence in Online Education", orgTextX, 52, { lineBreak: false });
+  doc.fillColor("#666d75").fontSize(8).font("Helvetica")
+    .text("OFFICIAL CERTIFICATE", W - 222, 42, { width: 190, align: "right", lineBreak: false });
 
-  // Decorative horizontal rule
-  const ruleY = 125;
-  doc.moveTo(80, ruleY).lineTo(W - 80, ruleY).lineWidth(0.8).stroke("#d1fae5");
+  // ── CERTIFICATE TITLE
+  doc.fillColor("#0d1b2a").fontSize(28).font("Helvetica-Bold")
+    .text("CERTIFICATE OF COMPLETION", 0, 108, { align: "center" });
 
-  // "This is to certify that"
-  doc.fillColor("#6b7280").fontSize(12).font("Helvetica")
-    .text("This is to certify that", 0, 148, { align: "center" });
+  // ── TRIPLE DECORATIVE GOLD RULE
+  const rY = 152;
+  const rX1 = 100, rX2 = W - 100;
+  doc.moveTo(rX1, rY - 2).lineTo(rX2, rY - 2).lineWidth(0.4).strokeColor("#DAA520").stroke();
+  doc.moveTo(rX1, rY).lineTo(rX2, rY).lineWidth(1.5).strokeColor("#B8860B").stroke();
+  doc.moveTo(rX1, rY + 2).lineTo(rX2, rY + 2).lineWidth(0.4).strokeColor("#DAA520").stroke();
 
-  // Student name
-  doc.fillColor("#111827").fontSize(38).font("Helvetica-Bold")
-    .text(studentName, 60, 172, { align: "center", width: W - 120 });
+  // ── CERTIFY TEXT
+  doc.fillColor("#6b7280").fontSize(11).font("Helvetica")
+    .text("This is to certify that", 0, 166, { align: "center" });
 
-  // "has successfully completed"
-  doc.fillColor("#6b7280").fontSize(12).font("Helvetica")
-    .text("has successfully completed", 0, 226, { align: "center" });
+  // ── STUDENT NAME
+  doc.fillColor("#111827").fontSize(36).font("Helvetica-Bold")
+    .text(studentName, 60, 184, { align: "center", width: W - 120 });
 
-  // Course title
-  doc.fillColor("#1d4ed8").fontSize(20).font("Helvetica-Bold")
-    .text(courseTitle, 80, 250, { align: "center", width: W - 160 });
+  // ── NAME UNDERLINE
+  doc.moveTo(220, 235).lineTo(W - 220, 235)
+    .lineWidth(0.8).strokeColor("#DAA520").stroke();
 
-  // Instructor
+  // ── HAS COMPLETED
+  doc.fillColor("#6b7280").fontSize(11).font("Helvetica")
+    .text("has successfully completed the course", 0, 244, { align: "center" });
+
+  // ── COURSE TITLE
+  doc.fillColor("#1e40af").fontSize(20).font("Helvetica-Bold")
+    .text(courseTitle, 80, 262, { align: "center", width: W - 160 });
+
+  // ── INSTRUCTOR
   if (instructorName) {
-    doc.fillColor("#6b7280").fontSize(11).font("Helvetica")
-      .text(`Instructed by ${instructorName}`, 0, 295, { align: "center" });
+    doc.fillColor("#374151").fontSize(10).font("Helvetica")
+      .text("Instructed by  ", 0, 299, { align: "center", continued: true })
+      .font("Helvetica-Bold").text(instructorName);
   }
 
-  // Bottom divider
-  const bottomY = 340;
-  doc.moveTo(80, bottomY).lineTo(W - 80, bottomY).lineWidth(0.5).stroke("#e5e7eb");
+  // ── MID DIVIDER
+  doc.moveTo(50, 324).lineTo(W - 50, 324)
+    .lineWidth(0.5).strokeColor("#e5e7eb").stroke();
 
-  // Date (left) | Grade (center) | Certificate ID (right)
-  const infoY = 360;
-  doc.fillColor("#374151").fontSize(10).font("Helvetica-Bold")
-    .text("DATE ISSUED", 80, infoY)
-    .font("Helvetica").fillColor("#111827").fontSize(12)
-    .text(issuedDate, 80, infoY + 16);
+  // ── BOTTOM INFO SECTION
+  const iY = 337;
 
-  doc.fillColor("#374151").fontSize(10).font("Helvetica-Bold")
-    .text("GRADE", 0, infoY, { align: "center" })
-    .font("Helvetica").fillColor("#16a34a").fontSize(12)
-    .text(cert.grade || "Pass", 0, infoY + 16, { align: "center" });
+  // Left — Date & Certificate ID
+  doc.fillColor("#6b7280").fontSize(8).font("Helvetica-Bold")
+    .text("DATE ISSUED", 62, iY);
+  doc.fillColor("#111827").fontSize(11).font("Helvetica")
+    .text(issuedDate, 62, iY + 14);
+  doc.fillColor("#6b7280").fontSize(8).font("Helvetica-Bold")
+    .text("CERTIFICATE ID", 62, iY + 38);
+  doc.fillColor("#9ca3af").fontSize(8).font("Courier")
+    .text(certId, 62, iY + 51, { width: 220 });
 
-  const rightX = W - 200;
-  doc.fillColor("#374151").fontSize(10).font("Helvetica-Bold")
-    .text("CERTIFICATE ID", rightX, infoY, { width: 140 })
-    .font("Helvetica").fillColor("#6b7280").fontSize(9)
-    .text(certId, rightX, infoY + 16, { width: 140 });
+  // Center — Grade & Signature
+  const cX = W / 2;
+  doc.fillColor("#6b7280").fontSize(8).font("Helvetica-Bold")
+    .text("GRADE", cX - 60, iY, { width: 120, align: "center" });
+  const gradeColor = (cert.grade === "Pass" || cert.grade === "A" || cert.grade === "A+") ? "#16a34a" : "#1e40af";
+  doc.fillColor(gradeColor).fontSize(16).font("Helvetica-Bold")
+    .text(cert.grade || "Pass", cX - 60, iY + 13, { width: 120, align: "center" });
 
-  // Bottom accent bar
-  doc.rect(0, H - 8, W, 8).fill("#1d4ed8");
+  const sigY = iY + 55;
+  doc.moveTo(cX - 80, sigY).lineTo(cX + 80, sigY)
+    .lineWidth(0.7).strokeColor("#374151").stroke();
+  doc.fillColor("#374151").fontSize(9).font("Helvetica")
+    .text(instructorName || "SFT Platform", cX - 80, sigY + 5, { width: 160, align: "center" });
+  doc.fillColor("#9ca3af").fontSize(7).font("Helvetica")
+    .text("AUTHORIZED SIGNATURE", cX - 80, sigY + 17, { width: 160, align: "center" });
+
+  // Right — QR Code
+  const qrX = W - 145;
+  const qrY2 = iY - 5;
+  doc.image(qrBuffer, qrX, qrY2, { width: 80, height: 80 });
+  doc.fillColor("#9ca3af").fontSize(6.5).font("Helvetica")
+    .text("Scan to verify", qrX, qrY2 + 83, { width: 80, align: "center" });
+
+  // ── SECOND TRIPLE GOLD RULE
+  const r2Y = 437;
+  doc.moveTo(rX1, r2Y - 2).lineTo(rX2, r2Y - 2).lineWidth(0.4).strokeColor("#DAA520").stroke();
+  doc.moveTo(rX1, r2Y).lineTo(rX2, r2Y).lineWidth(1.5).strokeColor("#B8860B").stroke();
+  doc.moveTo(rX1, r2Y + 2).lineTo(rX2, r2Y + 2).lineWidth(0.4).strokeColor("#DAA520").stroke();
+
+  // ── FOOTER NAVY BAND
+  doc.rect(14, 445, W - 28, 50).fill("#0d1b2a");
+  doc.fillColor("#aab0bb").fontSize(8).font("Helvetica")
+    .text(`Verify this certificate at: ${verifyUrl}`, 30, 455, { align: "center", width: W - 60 });
+  doc.fillColor("#666d75").fontSize(7).font("Helvetica")
+    .text(
+      `Certificate ID: ${certId}  ·  Issued by SFT Learning Platform  ·  ${issuedDate}`,
+      30, 469, { align: "center", width: W - 60 }
+    );
+
+  // ── BOTTOM GOLD ACCENT
+  doc.rect(14, 497, W - 28, 5).fill("#B8860B");
 
   doc.end();
-});
+}
