@@ -1,8 +1,6 @@
 import { motion } from "framer-motion";
 import { Button } from "@mui/material";
 import { useNavigate } from "react-router-dom";
-
-import StatsSection from "./StatsSection";
 import CodeAnimation from "./CodeAnimation";
 
 const Hero = () => {
@@ -84,7 +82,9 @@ const Hero = () => {
               transition={{ delay: 0.25 }}
               className="mt-6 sm:mt-8 max-w-xl text-base sm:text-lg leading-7 sm:leading-8 text-gray-500"
             >
-              Master high-demand tech skills through expert-led, career-focused programs in QA, Cybersecurity, Data Analytics, AI & more. Learn online or in NYC — with internship & job support included.
+              Master high-demand tech skills through expert-led, career-focused
+              programs in QA, Cybersecurity, Data Analytics, AI & more. Learn
+              online or in NYC — with internship & job support included.
             </motion.p>
 
             {/* CTA BUTTONS */}
@@ -126,17 +126,20 @@ const Hero = () => {
               {/* USERS */}
               <div className="flex -space-x-3">
                 <img
-                  src="https://i.pravatar.cc/100?img=12"
+                  src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=200&auto=format&fit=crop"
+                  alt="Female student from School for Training"
                   className="w-11 h-11 rounded-full border-2 border-white object-cover shadow-sm"
                 />
 
                 <img
-                  src="https://i.pravatar.cc/100?img=22"
+                  src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=200&auto=format&fit=crop"
+                  alt="Male software engineering learner"
                   className="w-11 h-11 rounded-full border-2 border-white object-cover shadow-sm"
                 />
 
                 <img
-                  src="https://i.pravatar.cc/100?img=30"
+                  src="https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?q=80&w=200&auto=format&fit=crop"
+                  alt="Professional student enrolled in online training"
                   className="w-11 h-11 rounded-full border-2 border-white object-cover shadow-sm"
                 />
               </div>
@@ -144,7 +147,7 @@ const Hero = () => {
               {/* TEXT */}
               <div>
                 <p className="text-sm font-semibold text-gray-900">
-                  Trusted by 10,000+ learners
+                  Trusted by 5,000+ learners
                 </p>
 
                 <p className="text-sm text-gray-500">

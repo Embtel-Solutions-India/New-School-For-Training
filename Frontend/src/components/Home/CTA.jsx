@@ -139,11 +139,11 @@ export default function CTA() {
             <div>
 
               <h3 className="text-3xl font-bold text-gray-900">
-                10K+
+                5K+
               </h3>
 
               <p className="mt-2 text-sm text-gray-500">
-                Active Learners
+                Learners
               </p>
 
             </div>

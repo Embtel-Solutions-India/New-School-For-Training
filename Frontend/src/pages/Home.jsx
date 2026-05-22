@@ -1,6 +1,5 @@
 import Navbar from "../components/Common/NavBar";
 import Hero from "../components/Home/Hero";
-import StatsSection from "../components/Home/StatsSection";
 import HeroBanner from "../components/Home/HeroBanner";
 import CourseShowcase from "../components/Home/CourseShowcase";
 import Features from "../components/Home/Features";
