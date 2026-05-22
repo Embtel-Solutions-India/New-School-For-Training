@@ -3,6 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Award, CheckCircle2, Shield, AlertCircle, ArrowLeft, ExternalLink, Calendar, BookOpen, User } from "lucide-react";
 import api from "../services/api";
+import SEO, { breadcrumbSchema } from "../components/SEO";
 
 const glass = "border border-white/10 bg-white/[0.07] shadow-[0_24px_90px_rgba(0,0,0,0.32)] backdrop-blur-2xl";
 
@@ -22,6 +23,36 @@ const CertificateVerifyPage = () => {
 
   return (
     <div className="min-h-screen bg-[#070b14] flex flex-col items-center justify-center p-6">
+      <SEO
+        title={cert ? `Verified Certificate - ${cert.studentName}` : "Certificate Verification"}
+        description={
+          cert
+            ? `Verify ${cert.studentName}'s School For Training certificate for ${cert.courseTitle}.`
+            : "Verify School For Training certificates using a public certificate ID."
+        }
+        keywords={[cert?.courseTitle, cert?.studentName, "certificate verification", "School For Training certificate"]}
+        canonical={`/certificate/verify/${certId || ""}`}
+        image="/images/sft_logo.png"
+        structuredData={[
+          cert && {
+            "@context": "https://schema.org",
+            "@type": "EducationalOccupationalCredential",
+            name: `Certificate of Completion - ${cert.courseTitle}`,
+            credentialCategory: "Certificate",
+            recognizedBy: {
+              "@type": "Organization",
+              name: "School For Training",
+            },
+            about: cert.courseTitle,
+            dateCreated: cert.issuedAt,
+          },
+          breadcrumbSchema([
+            { name: "Home", path: "/" },
+            { name: "Certificate Verification", path: `/certificate/verify/${certId || ""}` },
+          ]),
+        ]}
+        noindex={notFound}
+      />
       {/* Brand header */}
       <motion.div
         initial={{ opacity: 0, y: -12 }}

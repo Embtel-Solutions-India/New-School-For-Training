@@ -94,6 +94,7 @@ import TeacherJobPostings from "./TeacherJobPostings";
 import StudentReviews from "./StudentReviews";
 import { DashboardThemeProvider, useDashboardTheme } from "../../context/ThemeContext";
 import { ThemeProvider as MuiThemeProvider, createTheme } from "@mui/material/styles";
+import { lightMuiTheme } from "../../theme/lightTheme";
 
 const sectionTitles = {
   "s-overview": "Dashboard Overview",
@@ -151,11 +152,6 @@ const darkMuiTheme = createTheme({
   typography: { fontFamily: "Inter, sans-serif" },
 });
 
-const lightMuiTheme = createTheme({
-  palette: { mode: "light", primary: { main: "#16a34a" }, secondary: { main: "#ea580c" },
-             background: { default: "#f1f5f9", paper: "#ffffff" } },
-  typography: { fontFamily: "Inter, sans-serif" },
-});
 
 const NOTIF_TYPES = {
   success:      { icon: CheckCheck, color: "#22c55e", bg: "rgba(34,197,94,0.15)" },

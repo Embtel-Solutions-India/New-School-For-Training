@@ -91,7 +91,7 @@ export default function CourseShowcase() {
                 <CourseCard
                   course={course}
                   onEnroll={() => navigate(user ? "/dashboard" : "/login")}
-                  onViewDetails={() => navigate(`/courses/${course._id}`)}
+                  onViewDetails={() => navigate(`/courses/${course.slug || course._id}`)}
                 />
               </motion.div>
             ))}
@@ -121,6 +121,7 @@ const CourseCard = ({ course, onEnroll, onViewDetails }) => {
           src={course.thumbnail || FALLBACK_IMAGE}
           alt={course.title}
           className="w-full h-full object-cover transition duration-500 group-hover:scale-105"
+          loading="lazy"
           onError={(e) => { e.target.src = FALLBACK_IMAGE; }}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />

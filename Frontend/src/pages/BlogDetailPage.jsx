@@ -7,11 +7,48 @@ import { ArrowLeft, Calendar, Clock, Eye, Heart, MessageCircle, Send, Tag, Trash
 import toast from "react-hot-toast";
 import Navbar from "../components/Common/NavBar";
 import Footer from "../components/Common/Footer";
+import SEO, { breadcrumbSchema, buildCanonical, stripHtml, truncate } from "../components/SEO";
 import { useBlogDetail } from "../hooks/useBlog";
 import blogApi from "../services/blogApi";
 import useAuthStore from "../store/authStore";
 
 const FALLBACK_IMAGE = "/images/Tech.jpg";
+
+const extractHeadings = (html = "") =>
+  Array.from(html.matchAll(/<h2[^>]*>(.*?)<\/h2>/gi))
+    .map((match) => stripHtml(match[1]))
+    .filter(Boolean)
+    .slice(0, 8);
+
+const buildArticleSchema = (blog, canonicalPath) => {
+  if (!blog) return null;
+
+  return {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    headline: blog.title,
+    description: truncate(blog.shortDescription || blog.subtitle || blog.content, 180),
+    image: blog.featuredImage || FALLBACK_IMAGE,
+    url: buildCanonical(canonicalPath),
+    datePublished: blog.publishedAt || blog.createdAt,
+    dateModified: blog.updatedAt || blog.publishedAt || blog.createdAt,
+    articleSection: blog.category,
+    keywords: (blog.tags || []).join(", "),
+    timeRequired: `PT${blog.readTime || 1}M`,
+    author: {
+      "@type": "Person",
+      name: blog.author?.name || "School For Training",
+    },
+    publisher: {
+      "@type": "Organization",
+      name: "School For Training",
+      logo: {
+        "@type": "ImageObject",
+        url: buildCanonical("/images/sft_logo.png"),
+      },
+    },
+  };
+};
 
 const BLOG_CONTENT_STYLES = `
   .blog-body h1 { font-size: 1.875rem; font-weight: 700; margin: 1.75rem 0 0.875rem; color: #111827; line-height: 1.3; }
@@ -133,6 +170,19 @@ export default function BlogDetailPage() {
   const [replyTo, setReplyTo] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const commentInputRef = useRef(null);
+  const canonicalPath = `/blog/${blog?.slug || slug}`;
+  const blogDescription =
+    blog?.shortDescription ||
+    blog?.subtitle ||
+    truncate(blog?.content || "Read technology, career, and certification insights from School For Training.", 155);
+  const blogKeywords = [
+    blog?.title,
+    blog?.category,
+    ...(blog?.tags || []),
+    "technology blog",
+    "School For Training",
+  ];
+  const tableOfContents = extractHeadings(blog?.content || "");
 
   useEffect(() => {
     if (!blog) return;
@@ -209,6 +259,33 @@ export default function BlogDetailPage() {
 
   return (
     <div className="overflow-x-hidden">
+      <SEO
+        title={blog?.title || "Blog Article"}
+        description={blogDescription}
+        keywords={blogKeywords}
+        canonical={canonicalPath}
+        image={blog?.featuredImage || FALLBACK_IMAGE}
+        type="article"
+        structuredData={[
+          buildArticleSchema(blog, canonicalPath),
+          breadcrumbSchema([
+            { name: "Home", path: "/" },
+            { name: "Blog", path: "/blog" },
+            { name: blog?.title || "Article", path: canonicalPath },
+          ]),
+          tableOfContents.length > 0 && {
+            "@context": "https://schema.org",
+            "@type": "ItemList",
+            name: `${blog?.title || "Article"} table of contents`,
+            itemListElement: tableOfContents.map((heading, index) => ({
+              "@type": "ListItem",
+              position: index + 1,
+              name: heading,
+            })),
+          },
+        ]}
+        noindex={Boolean(error && !loading)}
+      />
       <Navbar />
 
       <main className="mt-20 bg-white min-h-screen">
@@ -244,6 +321,7 @@ export default function BlogDetailPage() {
                 src={blog.featuredImage || FALLBACK_IMAGE}
                 alt={blog.title}
                 className="w-full h-full object-cover"
+                loading="eager"
                 onError={(e) => { e.target.src = FALLBACK_IMAGE; }}
               />
               <div className="absolute inset-0 bg-linear-to-t from-black/80 via-black/40 to-black/10" />
@@ -456,6 +534,7 @@ export default function BlogDetailPage() {
                           src={r.featuredImage || FALLBACK_IMAGE}
                           alt={r.title}
                           className="w-full h-36 object-cover group-hover:scale-105 transition duration-500"
+                          loading="lazy"
                           onError={(e) => { e.target.src = FALLBACK_IMAGE; }}
                         />
                         <div className="p-4">

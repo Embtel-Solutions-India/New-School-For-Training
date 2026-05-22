@@ -13,7 +13,7 @@ export default function Footer() {
 
           {/* Brand */}
           <div className="md:col-span-2">
-            <img src="https://schoolfortraining.com/sft_logo.png" alt="SchoolForTraining Logo" className="h-15 w-auto pb-3" />
+            <img src="/images/sft_logo.png" alt="SchoolForTraining Logo" className="h-15 w-auto pb-3" />
             <p className="text-gray-700 max-w-sm">
               Empowering students with real-world skills, hands-on projects,
               and career-focused learning paths.

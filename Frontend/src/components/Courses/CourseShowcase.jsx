@@ -133,6 +133,7 @@ const CourseShowcase = () => {
                   <div className="relative">
                     <img src={course.thumbnail || FALLBACK_IMAGE} alt={course.title}
                       className="w-full h-48 object-cover rounded-t-2xl"
+                      loading="lazy"
                       onError={(e) => { e.target.src = FALLBACK_IMAGE; }} />
                     <span className="absolute top-3 left-3 bg-green-700 text-white text-xs px-3 py-1 rounded-full">
                       {tag}
@@ -175,7 +176,7 @@ const CourseShowcase = () => {
                     )}
                     <div className="mt-auto flex gap-2">
                       <Button fullWidth variant="outlined"
-                        onClick={() => navigate(`/courses/${course._id}`)}
+                        onClick={() => navigate(`/courses/${course.slug || course._id}`)}
                         sx={{ borderRadius: 1.5, borderColor: "#15803d", color: "#15803d", fontSize: 12, fontWeight: 600, "&:hover": { bgcolor: "#f0fdf4", borderColor: "#15803d" } }}>
                         View Details
                       </Button>

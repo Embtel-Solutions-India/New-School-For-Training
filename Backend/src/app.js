@@ -18,6 +18,7 @@ import certificateRoutes from "./routes/certificateRoutes.js";
 import aiRoutes from "./routes/aiRoutes.js";
 import jobRoutes from "./routes/jobRoutes.js";
 import resumeRoutes from "./routes/resumeRoutes.js";
+import seoRoutes from "./routes/seoRoutes.js";
 import { authLimiter } from "./middleware/rateLimiter.js";
 import { errorHandler, notFound } from "./middleware/errorMiddleware.js";
 
@@ -75,6 +76,7 @@ app.use("/api/certificate", certificateRoutes);
 app.use("/api/ai", aiRoutes);
 app.use("/api/jobs", jobRoutes);
 app.use("/api/resume", resumeRoutes);
+app.use("/api/seo", seoRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

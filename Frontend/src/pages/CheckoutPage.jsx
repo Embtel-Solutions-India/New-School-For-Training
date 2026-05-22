@@ -5,6 +5,7 @@ import { BookOpen, CheckCircle2, Tag, X } from "lucide-react";
 import toast from "react-hot-toast";
 import Navbar from "../components/Common/NavBar";
 import Footer from "../components/Common/Footer";
+import SEO from "../components/SEO";
 import useAuthStore from "../store/authStore";
 import paymentApi from "../services/paymentApi";
 import studentApi from "../services/studentApi";
@@ -199,6 +200,18 @@ const CheckoutPage = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 overflow-x-hidden">
+      <SEO
+        title={course ? `Checkout - ${course.title}` : "Course Checkout"}
+        description={
+          course
+            ? `Complete your secure enrollment for ${course.title} at School For Training.`
+            : "Complete your secure School For Training course enrollment."
+        }
+        keywords={[course?.title, course?.category, "course checkout", "secure enrollment"]}
+        canonical={`/checkout/${courseId}`}
+        image={course?.thumbnail || "/images/Courses1.png"}
+        noindex
+      />
       <Navbar />
 
       <main className="max-w-4xl mx-auto px-4 sm:px-6 py-12 mt-16">
@@ -213,7 +226,7 @@ const CheckoutPage = () => {
             <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
               <div className="flex gap-4 p-5">
                 {course.thumbnail ? (
-                  <img src={course.thumbnail} alt="" className="h-20 w-32 shrink-0 rounded-xl object-cover" />
+                  <img src={course.thumbnail} alt={course.title} className="h-20 w-32 shrink-0 rounded-xl object-cover" />
                 ) : (
                   <div className="flex h-20 w-32 shrink-0 items-center justify-center rounded-xl bg-green-50">
                     <BookOpen size={24} className="text-green-600" />

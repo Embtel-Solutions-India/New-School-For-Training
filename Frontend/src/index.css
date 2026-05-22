@@ -54,26 +54,108 @@
 .dashboard-light [class*="bg-gradient-to"][class*="text-white"] svg {
   color: #ffffff !important;
 }
-/* Opacity variants — override the rule above (same specificity, later wins) */
+/* Opacity variants — scaled to ensure legibility on white */
 .dashboard-light [class*="text-white/1"],
 .dashboard-light [class*="text-white/2"],
 .dashboard-light [class*="text-white/3"] {
-  color: rgba(15, 23, 42, 0.28) !important;
+  color: rgba(15, 23, 42, 0.44) !important;
 }
 .dashboard-light [class*="text-white/4"] {
-  color: rgba(15, 23, 42, 0.42) !important;
+  color: rgba(15, 23, 42, 0.56) !important;
 }
 .dashboard-light [class*="text-white/5"] {
-  color: rgba(15, 23, 42, 0.52) !important;
+  color: rgba(15, 23, 42, 0.65) !important;
 }
 .dashboard-light [class*="text-white/6"],
 .dashboard-light [class*="text-white/7"] {
-  color: rgba(15, 23, 42, 0.65) !important;
+  color: rgba(15, 23, 42, 0.76) !important;
 }
 .dashboard-light [class*="text-white/8"],
 .dashboard-light [class*="text-white/9"] {
-  color: rgba(15, 23, 42, 0.85) !important;
+  color: rgba(15, 23, 42, 0.90) !important;
 }
+
+/* ── Light-colored text → dark in light theme ─────────────────
+   Targets Tailwind scale-300 and below (very light) → readable dark
+   Scale-400/500 → medium-dark muted tone
+   Does NOT touch saturated colored classes (emerald, green, blue, red…)
+   which remain intentional accent colors.
+──────────────────────────────────────────────────────────────── */
+
+/* Gray / Slate / Zinc / Neutral / Stone — 50-300 (near-white) → dark */
+.dashboard-light [class*="text-gray-50"],
+.dashboard-light [class*="text-gray-100"],
+.dashboard-light [class*="text-gray-200"],
+.dashboard-light [class*="text-gray-300"] { color: #1e293b !important; }
+
+.dashboard-light [class*="text-slate-50"],
+.dashboard-light [class*="text-slate-100"],
+.dashboard-light [class*="text-slate-200"],
+.dashboard-light [class*="text-slate-300"] { color: #1e293b !important; }
+
+.dashboard-light [class*="text-zinc-50"],
+.dashboard-light [class*="text-zinc-100"],
+.dashboard-light [class*="text-zinc-200"],
+.dashboard-light [class*="text-zinc-300"] { color: #1e293b !important; }
+
+.dashboard-light [class*="text-neutral-50"],
+.dashboard-light [class*="text-neutral-100"],
+.dashboard-light [class*="text-neutral-200"],
+.dashboard-light [class*="text-neutral-300"] { color: #1e293b !important; }
+
+.dashboard-light [class*="text-stone-50"],
+.dashboard-light [class*="text-stone-100"],
+.dashboard-light [class*="text-stone-200"],
+.dashboard-light [class*="text-stone-300"] { color: #1e293b !important; }
+
+/* Scale 400-500 → muted dark */
+.dashboard-light [class*="text-gray-400"],
+.dashboard-light [class*="text-gray-500"] { color: #475569 !important; }
+
+.dashboard-light [class*="text-slate-400"],
+.dashboard-light [class*="text-slate-500"] { color: #475569 !important; }
+
+.dashboard-light [class*="text-zinc-400"],
+.dashboard-light [class*="text-zinc-500"] { color: #475569 !important; }
+
+.dashboard-light [class*="text-neutral-400"],
+.dashboard-light [class*="text-neutral-500"] { color: #475569 !important; }
+
+.dashboard-light [class*="text-stone-400"],
+.dashboard-light [class*="text-stone-500"] { color: #475569 !important; }
+
+/* Opacity variants of light neutral text (e.g. text-gray-400/70) */
+.dashboard-light [class*="text-gray-"][class*="/"],
+.dashboard-light [class*="text-slate-"][class*="/"],
+.dashboard-light [class*="text-zinc-"][class*="/"],
+.dashboard-light [class*="text-neutral-"][class*="/"],
+.dashboard-light [class*="text-stone-"][class*="/"] { color: rgba(71, 85, 105, 0.75) !important; }
+
+/* ── Buttons with light text ────────────────────────────────── */
+/* Ghost / outline / plain buttons that use light text classes */
+.dashboard-light button[class*="text-gray-"],
+.dashboard-light button[class*="text-slate-"],
+.dashboard-light button[class*="text-zinc-"],
+.dashboard-light button[class*="text-white"] { color: #1e293b !important; }
+
+/* Buttons that use light border colors */
+.dashboard-light button[class*="border-white/"],
+.dashboard-light button[class*="border-gray-"],
+.dashboard-light button[class*="border-slate-"] { border-color: rgba(15, 23, 42, 0.20) !important; }
+
+/* ── Preserve intentional accent button text ────────────────── */
+/* Buttons on colored backgrounds keep their white text */
+.dashboard-light button[class*="bg-emerald-"],
+.dashboard-light button[class*="bg-green-"],
+.dashboard-light button[class*="bg-blue-"],
+.dashboard-light button[class*="bg-sky-"],
+.dashboard-light button[class*="bg-red-"],
+.dashboard-light button[class*="bg-rose-"],
+.dashboard-light button[class*="bg-orange-"],
+.dashboard-light button[class*="bg-violet-"],
+.dashboard-light button[class*="bg-indigo-"],
+.dashboard-light button[class*="bg-purple-"],
+.dashboard-light button[class*="bg-gradient-to"] { color: #ffffff !important; }
 
 /* Dark hex backgrounds → light */
 .dashboard-light [class*="bg-[#0"] {
@@ -83,7 +165,7 @@
   background-color: #f1f5f9 !important;
 }
 .dashboard-light [class*="bg-black/"] {
-  background-color: rgba(255, 255, 255, 0.55) !important;
+  background-color: rgba(15, 23, 42, 0.05) !important;
 }
 
 /* Translucent white surfaces */
@@ -102,25 +184,27 @@
   color: #ffffff !important;
 }
 
-.dashboard-light .bg-white.shadow-lg svg,
-.dashboard-light .bg-white.shadow-lg [class*="text-emerald"] {
+/* Icons and text inside the active (dark) sidebar pill should stay white */
+.dashboard-light .bg-white.shadow-lg > svg,
+.dashboard-light .bg-white.shadow-lg > span,
+.dashboard-light .bg-white.shadow-lg [class*="text-emerald-7"] {
   color: #ffffff !important;
 }
 
 /* Recharts: hardcoded dark-theme strokes are inline in many dashboard charts. */
 .dashboard-light .recharts-cartesian-axis-line,
 .dashboard-light .recharts-cartesian-axis-tick-line {
-  stroke: rgba(71, 85, 105, 0.45) !important;
+  stroke: rgba(51, 65, 85, 0.55) !important;
 }
 
 .dashboard-light .recharts-cartesian-grid line {
-  stroke: rgba(15, 23, 42, 0.10) !important;
+  stroke: #CBD5E1 !important;
 }
 
 .dashboard-light .recharts-cartesian-axis-tick text,
 .dashboard-light .recharts-text.recharts-cartesian-axis-tick-value {
-  fill: #475569 !important;
-  color: #475569 !important;
+  fill: #334155 !important;
+  color: #334155 !important;
 }
 
 .dashboard-light .recharts-default-tooltip {
@@ -151,6 +235,359 @@
 
 .dashboard-light .MuiOutlinedInput-notchedOutline {
   border-color: rgba(15, 23, 42, 0.18) !important;
+}
+
+/* ── MUI: Skeleton ─────────────────────────────────────────── */
+.dashboard-light .MuiSkeleton-root {
+  background-color: rgba(15, 23, 42, 0.10) !important;
+}
+
+/* ── MUI: Buttons ──────────────────────────────────────────── */
+.dashboard-light .MuiButton-text,
+.dashboard-light .MuiButton-outlined {
+  color: #1e293b !important;
+  border-color: rgba(15, 23, 42, 0.22) !important;
+}
+.dashboard-light .MuiIconButton-root {
+  color: rgba(15, 23, 42, 0.60) !important;
+}
+
+/* ── MUI: Select icon ──────────────────────────────────────── */
+.dashboard-light .MuiSelect-icon {
+  color: rgba(15, 23, 42, 0.50) !important;
+}
+.dashboard-light .MuiFormHelperText-root {
+  color: rgba(15, 23, 42, 0.55) !important;
+}
+
+/* ── MUI: Tabs ──────────────────────────────────────────────── */
+.dashboard-light .MuiTab-root {
+  color: rgba(15, 23, 42, 0.52) !important;
+}
+.dashboard-light .MuiTab-root.Mui-selected {
+  color: #16a34a !important;
+}
+.dashboard-light .MuiTabs-root {
+  border-bottom-color: rgba(15, 23, 42, 0.10) !important;
+}
+
+/* ── MUI: LinearProgress ────────────────────────────────────── */
+.dashboard-light .MuiLinearProgress-root {
+  background-color: rgba(15, 23, 42, 0.10) !important;
+}
+
+/* ── MUI: Chip ──────────────────────────────────────────────── */
+.dashboard-light .MuiChip-root {
+  background-color: rgba(15, 23, 42, 0.08) !important;
+}
+.dashboard-light .MuiChip-label {
+  color: #1e293b !important;
+}
+.dashboard-light .MuiChip-deleteIcon {
+  color: rgba(15, 23, 42, 0.45) !important;
+}
+
+/* ── MUI: Divider ───────────────────────────────────────────── */
+.dashboard-light .MuiDivider-root {
+  border-color: rgba(15, 23, 42, 0.10) !important;
+}
+
+/* ── MUI: Table ─────────────────────────────────────────────── */
+.dashboard-light .MuiTableCell-head {
+  color: rgba(15, 23, 42, 0.60) !important;
+  background-color: rgba(15, 23, 42, 0.04) !important;
+}
+.dashboard-light .MuiTableCell-root {
+  border-color: rgba(15, 23, 42, 0.08) !important;
+}
+.dashboard-light .MuiTableRow-root:hover td {
+  background-color: rgba(15, 23, 42, 0.03) !important;
+}
+
+/* ── MUI: Pagination ────────────────────────────────────────── */
+.dashboard-light .MuiPaginationItem-root {
+  color: #1e293b !important;
+  border-color: rgba(15, 23, 42, 0.18) !important;
+}
+.dashboard-light .MuiPaginationItem-root.Mui-selected {
+  background-color: #16a34a !important;
+  color: #ffffff !important;
+}
+
+/* ── MUI: Dialog ────────────────────────────────────────────── */
+.dashboard-light .MuiDialog-paper {
+  background-color: #ffffff !important;
+  color: #1e293b !important;
+}
+.dashboard-light .MuiDialogTitle-root {
+  color: #0f172a !important;
+}
+.dashboard-light .MuiDialogContent-root,
+.dashboard-light .MuiDialogActions-root {
+  color: #374151 !important;
+}
+
+/* ── MUI: Menu / Popover ────────────────────────────────────── */
+.dashboard-light .MuiPaper-root.MuiPopover-paper {
+  background-color: #ffffff !important;
+  color: #1e293b !important;
+  border-color: rgba(15, 23, 42, 0.10) !important;
+}
+.dashboard-light .MuiMenuItem-root {
+  color: #1e293b !important;
+}
+.dashboard-light .MuiMenuItem-root:hover {
+  background-color: rgba(15, 23, 42, 0.05) !important;
+}
+
+/* ── MUI: Drawer (mobile sidebar) ───────────────────────────── */
+.dashboard-light .MuiDrawer-paper {
+  background-color: #f8fafc !important;
+  color: #1e293b !important;
+}
+
+/* ── MUI: Avatar ────────────────────────────────────────────── */
+.dashboard-light .MuiAvatar-colorDefault {
+  background-color: rgba(15, 23, 42, 0.15) !important;
+  color: #0f172a !important;
+}
+
+/* ── Recharts: axis/tick SVG text only (not data labels) ─────── */
+.dashboard-light .recharts-xAxis .recharts-text,
+.dashboard-light .recharts-yAxis .recharts-text,
+.dashboard-light .recharts-polar-angle-axis .recharts-text,
+.dashboard-light .recharts-polar-radius-axis .recharts-text {
+  fill: #334155 !important;
+}
+/* Legend */
+.dashboard-light .recharts-legend-item-text {
+  color: #334155 !important;
+  fill: #334155 !important;
+}
+/* Tooltip item value/name text */
+.dashboard-light .recharts-tooltip-item-name,
+.dashboard-light .recharts-tooltip-item-value,
+.dashboard-light .recharts-tooltip-item-separator {
+  color: #0f172a !important;
+}
+
+/* ════════════════════════════════════════════════════════════
+   PASS II — deeper readability for light theme
+   All rules scoped to .dashboard-light; dark theme untouched.
+   ════════════════════════════════════════════════════════════ */
+
+/* Base inheritable color so un-classed elements get dark text */
+.dashboard-light {
+  color: #0f172a;
+}
+
+/* ── Gray-600 / 700 already dark — ensure 800/900 not over-forced ─ */
+.dashboard-light [class*="text-gray-600"],
+.dashboard-light [class*="text-slate-600"],
+.dashboard-light [class*="text-zinc-600"],
+.dashboard-light [class*="text-neutral-600"] { color: #475569 !important; }
+
+.dashboard-light [class*="text-gray-700"],
+.dashboard-light [class*="text-slate-700"],
+.dashboard-light [class*="text-zinc-700"],
+.dashboard-light [class*="text-neutral-700"] { color: #334155 !important; }
+
+.dashboard-light [class*="text-gray-800"],
+.dashboard-light [class*="text-slate-800"],
+.dashboard-light [class*="text-zinc-800"],
+.dashboard-light [class*="text-neutral-800"],
+.dashboard-light [class*="text-gray-900"],
+.dashboard-light [class*="text-slate-900"],
+.dashboard-light [class*="text-zinc-900"],
+.dashboard-light [class*="text-neutral-900"] { color: #0f172a !important; }
+
+/* ── Native form elements ─────────────────────────────────── */
+.dashboard-light input:not([type="range"]):not([type="checkbox"]):not([type="radio"]):not([type="color"]),
+.dashboard-light textarea,
+.dashboard-light select {
+  color: #0f172a !important;
+  border-color: #e2e8f0 !important;
+}
+.dashboard-light input::placeholder,
+.dashboard-light textarea::placeholder {
+  color: #94a3b8 !important;
+  opacity: 1 !important;
+}
+
+/* ── Sidebar nav items: transparent base, dark hover ─────── */
+/* Prevents hover:bg-white/X from creating a permanent white bg */
+.dashboard-light nav button:not(.shadow-lg) {
+  background-color: transparent !important;
+}
+.dashboard-light nav button:not(.shadow-lg):hover {
+  background-color: rgba(15, 23, 42, 0.07) !important;
+  color: #1e293b !important;
+}
+/* Sidebar sub-items */
+.dashboard-light .pl-6 button {
+  color: #64748b !important;
+}
+.dashboard-light .pl-6 button:hover {
+  background-color: rgba(15, 23, 42, 0.06) !important;
+  color: #334155 !important;
+}
+
+/* ── Sidebar workspace badge ─────────────────────────────── */
+/* bg-black/60 becomes a subtle light surface */
+.dashboard-light [class*="bg-black/"] {
+  color: #334155 !important;
+}
+
+/* ── Glass card content: force dark body text ─────────────── */
+.dashboard-light .backdrop-blur-2xl p,
+.dashboard-light .backdrop-blur-2xl span,
+.dashboard-light .backdrop-blur-2xl li {
+  color: inherit;
+}
+
+/* ── Cards / surfaces with hardcoded dark utility classes ─── */
+/* Any div/section that uses a dark Tailwind bg should become light */
+.dashboard-light [class*="bg-slate-8"],
+.dashboard-light [class*="bg-slate-9"],
+.dashboard-light [class*="bg-gray-8"],
+.dashboard-light [class*="bg-gray-9"],
+.dashboard-light [class*="bg-zinc-8"],
+.dashboard-light [class*="bg-zinc-9"] {
+  background-color: #f1f5f9 !important;
+  color: #0f172a !important;
+}
+
+/* ── Hardcoded dark hex with 2/3-digit prefix ────────────── */
+.dashboard-light [class*="bg-[#2"] { background-color: #e2e8f0 !important; }
+.dashboard-light [class*="bg-[#3"] { background-color: #e2e8f0 !important; }
+
+/* ── MUI: additional typography / list overrides ────────────── */
+.dashboard-light .MuiTypography-root {
+  color: #0f172a !important;
+}
+.dashboard-light .MuiTypography-colorTextSecondary,
+.dashboard-light .MuiTypography-body2,
+.dashboard-light .MuiTypography-caption,
+.dashboard-light .MuiTypography-overline,
+.dashboard-light .MuiTypography-subtitle2 {
+  color: #475569 !important;
+}
+/* Preserve white text when Typography sits inside a colored bg */
+.dashboard-light [class*="bg-emerald-"] .MuiTypography-root,
+.dashboard-light [class*="bg-green-"]   .MuiTypography-root,
+.dashboard-light [class*="bg-blue-"]    .MuiTypography-root,
+.dashboard-light [class*="bg-sky-"]     .MuiTypography-root,
+.dashboard-light [class*="bg-red-"]     .MuiTypography-root,
+.dashboard-light [class*="bg-rose-"]    .MuiTypography-root,
+.dashboard-light [class*="bg-orange-"]  .MuiTypography-root,
+.dashboard-light [class*="bg-violet-"]  .MuiTypography-root,
+.dashboard-light [class*="bg-indigo-"]  .MuiTypography-root,
+.dashboard-light [class*="bg-purple-"]  .MuiTypography-root,
+.dashboard-light [class*="bg-gradient-to"] .MuiTypography-root {
+  color: #ffffff !important;
+}
+
+/* ── MUI: Card / Paper ───────────────────────────────────── */
+.dashboard-light .MuiPaper-root:not(.MuiDialog-paper):not(.MuiPopover-paper):not(.MuiDrawer-paper) {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+}
+.dashboard-light .MuiCard-root,
+.dashboard-light .MuiCardContent-root,
+.dashboard-light .MuiCardHeader-root {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+}
+.dashboard-light .MuiCardHeader-subheader {
+  color: #475569 !important;
+}
+
+/* ── MUI: List ───────────────────────────────────────────── */
+.dashboard-light .MuiListItem-root { color: #0f172a !important; }
+.dashboard-light .MuiListItemText-primary   { color: #0f172a !important; }
+.dashboard-light .MuiListItemText-secondary { color: #475569 !important; }
+.dashboard-light .MuiListItemIcon-root { color: #475569 !important; }
+
+/* ── MUI: Accordion ──────────────────────────────────────── */
+.dashboard-light .MuiAccordion-root {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+}
+.dashboard-light .MuiAccordionSummary-root { color: #0f172a !important; }
+.dashboard-light .MuiAccordionDetails-root { color: #334155 !important; }
+.dashboard-light .MuiAccordionSummary-expandIconWrapper { color: #475569 !important; }
+
+/* ── MUI: Alert ──────────────────────────────────────────── */
+.dashboard-light .MuiAlert-root { color: #1e293b !important; }
+.dashboard-light .MuiAlert-message { color: #1e293b !important; }
+
+/* ── MUI: Badge ──────────────────────────────────────────── */
+.dashboard-light .MuiBadge-badge {
+  font-weight: 700;
+}
+
+/* ── MUI: TableBody rows ──────────────────────────────────── */
+.dashboard-light .MuiTableBody-root .MuiTableCell-root {
+  color: #1e293b !important;
+}
+.dashboard-light .MuiTableCell-head {
+  color: #334155 !important;
+}
+
+/* ── MUI: Contained button — always white text ───────────── */
+.dashboard-light .MuiButton-contained {
+  color: #ffffff !important;
+}
+/* MUI outlined/text buttons should be legible dark */
+.dashboard-light .MuiButton-outlined,
+.dashboard-light .MuiButton-text {
+  color: #1e293b !important;
+}
+
+/* ── MUI: stronger icon button ───────────────────────────── */
+.dashboard-light .MuiIconButton-root {
+  color: rgba(15, 23, 42, 0.65) !important;
+}
+.dashboard-light .MuiIconButton-root:hover {
+  background-color: rgba(15, 23, 42, 0.06) !important;
+  color: #0f172a !important;
+}
+
+/* ── MUI: Switch ─────────────────────────────────────────── */
+.dashboard-light .MuiSwitch-track {
+  background-color: rgba(15, 23, 42, 0.20) !important;
+}
+
+/* ── MUI: Stepper ────────────────────────────────────────── */
+.dashboard-light .MuiStepLabel-label { color: #334155 !important; }
+.dashboard-light .MuiStepConnector-line { border-color: #e2e8f0 !important; }
+
+/* ── MUI: Tooltip (override CSS since theme already handles it) */
+.dashboard-light .MuiTooltip-tooltip {
+  background-color: #1e293b !important;
+  color: #ffffff !important;
+}
+
+/* ── Recharts polar / radial charts ──────────────────────── */
+.dashboard-light .recharts-radial-bar-background-sector { fill: #f1f5f9 !important; }
+.dashboard-light .recharts-sector[fill="none"] { stroke: #e2e8f0 !important; }
+
+/* ── Score / badge labels that use very light text ──────── */
+.dashboard-light [class*="text-[#8"],
+.dashboard-light [class*="text-[#9"],
+.dashboard-light [class*="text-[#a"],
+.dashboard-light [class*="text-[#b"],
+.dashboard-light [class*="text-[#c"],
+.dashboard-light [class*="text-[#d"],
+.dashboard-light [class*="text-[#e"],
+.dashboard-light [class*="text-[#f"] {
+  /* Hex text colors starting with 8-f are typically light → darken */
+  color: #334155 !important;
+}
+/* But keep intentional accent hex colors (green, emerald range) */
+/* ── Translucent white surfaces — boost opacity ──────────── */
+.dashboard-light .backdrop-blur-2xl {
+  background: rgba(255, 255, 255, 0.96) !important;
 }
 
 * {

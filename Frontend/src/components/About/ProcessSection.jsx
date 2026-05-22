@@ -1,4 +1,5 @@
-import { motion } from "framer-motion";
+import { useRef } from "react";
+import { motion, useScroll, useTransform } from "framer-motion";
 
 const steps = [
   {
@@ -19,91 +20,133 @@ const steps = [
   },
 ];
 
-export default function ProcessSection() {
+function ProcessCard({ step, index, progress, total }) {
+  const relative = useTransform(progress, (value) => {
+    return value * total - index;
+  });
+
+  const y = useTransform(relative, [-1, 0, 1], [120, 0, -80]);
+
+  const scale = useTransform(relative, [-1, 0, 1], [0.92, 1, 0.96]);
+
+  const opacity = useTransform(relative, (value) => {
+    // hidden before entering
+    if (value < -0.15) return 0;
+
+    // fade in
+    if (value < 0) {
+      return 1 + value / 0.15;
+    }
+
+    // fully visible
+    if (value <= 0.65) {
+      return 1;
+    }
+
+    // fade out
+    if (value <= 1) {
+      return 1 - (value - 0.65) / 0.35;
+    }
+
+    // hidden after leaving
+    return 0;
+  });
+
+  const blur = useTransform(relative, [-1, 0, 1], [8, 0, 6]);
+
   return (
-    <section className="relative bg-white py-20 sm:py-24 lg:py-32 px-4 sm:px-6 overflow-hidden">
+    <motion.div
+      className="absolute inset-0 flex items-center justify-center"
+      style={{
+        y,
+        scale,
+        opacity,
+        filter: blur.get() ? `blur(${blur.get()}px)` : "blur(0px)",
+        zIndex: total - index,
+        willChange: "transform, opacity",
+      }}
+    >
+      {/* CARD */}
+      <div className="relative bg-white border border-gray-200 rounded-[40px] shadow-[0_25px_80px_rgba(0,0,0,0.12)] overflow-hidden min-h-[520px] w-full p-8 sm:p-10 md:p-16 flex flex-col justify-between">
+        {/* NUMBER */}
+        <div className="absolute top-8 right-8 text-[90px] md:text-[120px] font-black text-gray-100 leading-none">
+          0{index + 1}
+        </div>
 
-      {/* BACKGROUND GLOW */}
-      <div className="absolute top-20 left-1/2 -translate-x-1/2 w-[360px] sm:w-[700px] h-[360px] sm:h-[700px] bg-green-100 rounded-full blur-3xl opacity-20"></div>
+        {/* TOP */}
+        <div className="relative z-10">
+          <p className="text-green-700 uppercase tracking-[0.3em] text-sm font-semibold mb-5">
+            Step 0{index + 1}
+          </p>
 
+          <h3 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 leading-tight max-w-3xl">
+            {step.title}
+          </h3>
+        </div>
+
+        {/* BOTTOM */}
+        <div className="relative z-10 flex flex-col md:flex-row md:items-end md:justify-between gap-8 mt-14">
+          <p className="text-gray-600 text-base sm:text-lg leading-relaxed max-w-2xl">
+            {step.desc}
+          </p>
+
+          <button className="px-8 py-4 rounded-2xl bg-green-700 text-white font-semibold hover:bg-orange-500 transition-all duration-300">
+            Learn More
+          </button>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+export default function ProcessSection() {
+  const containerRef = useRef(null);
+
+  const { scrollYProgress } = useScroll({
+    target: containerRef,
+    offset: ["start start", "end end"],
+  });
+
+  return (
+    <section className="relative bg-[#f7f7f7] py-32 overflow-visible">
       {/* HEADER */}
-      <div className="max-w-6xl mx-auto text-center mb-14 sm:mb-20 lg:mb-32">
+      <div className="max-w-6xl mx-auto text-center mb-24 px-4">
         <p className="text-green-700 uppercase tracking-[0.3em] text-sm font-semibold">
           Simple Process
         </p>
 
-        <h2 className="mt-4 text-3xl sm:text-5xl md:text-6xl font-bold text-gray-900">
+        <h2 className="mt-4 text-4xl md:text-6xl font-bold text-gray-900">
           How Your Journey Begins
         </h2>
 
-        <p className="mt-6 text-base sm:text-lg text-gray-600 max-w-2xl mx-auto">
+        <p className="mt-6 text-lg text-gray-600 max-w-2xl mx-auto">
           A premium learning flow designed for students and professionals.
         </p>
       </div>
 
       {/* STACK SECTION */}
-      <div className="relative max-w-5xl mx-auto">
-
-        {steps.map((step, index) => (
-          <div
-            key={index}
-            className="relative md:sticky md:top-24 mb-8 sm:mb-10"
-            style={{
-              height: "auto",
-              minHeight: "min(500px, 80vh)",
-              zIndex: index + 1,
-            }}
-          >
-
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9, y: 80 }}
-              whileInView={{ opacity: 1, scale: 1, y: 0 }}
-              transition={{ duration: 0.6 }}
-              className="h-auto md:h-[420px]"
-            >
-
-              <div className="relative h-full min-h-[360px] bg-white border border-gray-200 rounded-[28px] sm:rounded-[40px] shadow-2xl p-6 sm:p-10 md:p-16 flex flex-col justify-between gap-10">
-
-                {/* Number */}
-                <div className="absolute top-6 sm:top-8 right-6 sm:right-8 text-5xl sm:text-7xl font-black text-gray-100">
-                  0{index + 1}
-                </div>
-
-                {/* Content */}
-                <div>
-                  <p className="text-green-700 uppercase tracking-[0.3em] text-sm font-semibold mb-5">
-                    Step 0{index + 1}
-                  </p>
-
-                  <h3 className="text-2xl sm:text-3xl md:text-5xl font-bold text-gray-900 leading-tight max-w-2xl pr-10 sm:pr-0">
-                    {step.title}
-                  </h3>
-                </div>
-
-                <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 md:gap-10">
-
-                  <p className="text-gray-600 text-base sm:text-lg leading-relaxed max-w-2xl">
-                    {step.desc}
-                  </p>
-
-                  <button className="px-7 py-3 rounded-xl bg-green-700 text-white font-semibold hover:bg-orange-500 transition-all duration-300">
-                    Learn More
-                  </button>
-
-                </div>
-
-              </div>
-
-            </motion.div>
-
+      <div
+        ref={containerRef}
+        className="relative"
+        style={{
+          height: `${steps.length * 140}vh`,
+        }}
+      >
+        {/* STICKY AREA */}
+        <div className="sticky top-0 h-screen flex items-center justify-center">
+          <div className="relative w-full max-w-5xl px-4 min-h-[520px]">
+            {steps.map((step, index) => (
+              <ProcessCard
+                key={index}
+                step={step}
+                index={index}
+                progress={scrollYProgress}
+                total={steps.length}
+              />
+            ))}
           </div>
-        ))}
-
+        </div>
       </div>
-
-      {/* EXTRA SPACE */}
-      {/* <div className="h-[300px]" /> */}
-
     </section>
   );
 }

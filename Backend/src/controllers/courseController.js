@@ -1,6 +1,7 @@
 import Course from "../models/Course.js";
 import Enrollment from "../models/Enrollment.js";
 import Notification from "../models/Notification.js";
+import mongoose from "mongoose";
 import ApiError from "../utils/ApiError.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import { normalizeRole } from "../utils/roles.js";
@@ -205,7 +206,11 @@ export const getPublicCategories = asyncHandler(async (req, res) => {
 });
 
 export const getPublicCourseById = asyncHandler(async (req, res) => {
-  const course = await Course.findOne({ _id: req.params.courseId, status: "published" })
+  const courseLookup = mongoose.Types.ObjectId.isValid(req.params.courseId)
+    ? { $or: [{ _id: req.params.courseId }, { slug: req.params.courseId }] }
+    : { slug: req.params.courseId };
+
+  const course = await Course.findOne({ ...courseLookup, status: "published" })
     .populate("teacher", "name avatar bio")
     .lean();
 

@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import Navbar from "../components/Common/NavBar";
 import Footer from "../components/Common/Footer";
+import SEO, { breadcrumbSchema, buildCanonical, truncate } from "../components/SEO";
 import useAuthStore from "../store/authStore";
 import { useCourseDetail } from "../hooks/useCourses";
 import CourseReviewsSection from "../components/course/CourseReviewsSection";
@@ -15,6 +16,51 @@ const FALLBACK_IMAGE = "/images/Courses1.png";
 
 const formatPrice = (price) =>
   new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(price);
+
+const buildCourseStructuredData = (course, canonicalPath) => {
+  if (!course) return null;
+
+  const schema = {
+    "@context": "https://schema.org",
+    "@type": "Course",
+    name: course.title,
+    description: truncate(course.description || `${course.title} course`, 300),
+    image: course.thumbnail || FALLBACK_IMAGE,
+    url: buildCanonical(canonicalPath),
+    provider: {
+      "@type": "Organization",
+      name: "School For Training",
+    },
+  };
+
+  if (course.teacher?.name) {
+    schema.instructor = {
+      "@type": "Person",
+      name: course.teacher.name,
+    };
+  }
+
+  if (course.averageRating > 0 && course.reviewCount > 0) {
+    schema.aggregateRating = {
+      "@type": "AggregateRating",
+      ratingValue: Number(course.averageRating).toFixed(1),
+      reviewCount: course.reviewCount,
+      bestRating: 5,
+      worstRating: 1,
+    };
+  }
+
+  if (course.pricing) {
+    schema.offers = {
+      "@type": "Offer",
+      priceCurrency: course.pricing.currency || "USD",
+      price: course.pricing.price || 0,
+      availability: "https://schema.org/InStock",
+    };
+  }
+
+  return schema;
+};
 
 /* ── Reusable section card ── */
 const Card = ({ children, className = "" }) => (
@@ -122,10 +168,21 @@ const CourseDetailPage = () => {
   const { course, loading, error } = useCourseDetail(courseId);
 
   const isFree = (course?.pricing?.price ?? 0) === 0;
+  const coursePath = course ? `/courses/${course.slug || course._id || courseId}` : `/courses/${courseId}`;
+  const courseDescription = course?.description || "Explore this practical School For Training course with live learning, projects, quizzes, and certification.";
+  const courseKeywords = [
+    course?.title,
+    course?.category,
+    ...(course?.tags || []),
+    ...(course?.skills || []),
+    "online course",
+    "certification",
+    "School For Training",
+  ];
 
   const handleEnroll = () => {
     if (!user) return navigate("/login");
-    if (!isFree) return navigate(`/checkout/${courseId}`);
+    if (!isFree) return navigate(`/checkout/${course?._id || courseId}`);
     navigate("/dashboard");
   };
 
@@ -137,6 +194,23 @@ const CourseDetailPage = () => {
 
   return (
     <div className="overflow-x-hidden min-h-screen bg-gray-50">
+      <SEO
+        title={course ? `${course.title} Course` : "Course Details"}
+        description={courseDescription}
+        keywords={courseKeywords}
+        canonical={coursePath}
+        image={course?.thumbnail || FALLBACK_IMAGE}
+        type="website"
+        structuredData={[
+          buildCourseStructuredData(course, coursePath),
+          breadcrumbSchema([
+            { name: "Home", path: "/" },
+            { name: "Courses", path: "/courses" },
+            { name: course?.title || "Course Details", path: coursePath },
+          ]),
+        ]}
+        noindex={Boolean(error && !loading)}
+      />
       <Navbar />
 
       <main className="max-w-5xl mx-auto px-4 mt-20 sm:px-6 py-12 sm:py-16">
@@ -245,6 +319,7 @@ const CourseDetailPage = () => {
                 <div className="rounded-2xl border border-gray-200 bg-white shadow-md overflow-hidden sticky top-24">
                   <img src={course.thumbnail || FALLBACK_IMAGE} alt={course.title}
                     className="w-full h-48 object-cover"
+                    loading="lazy"
                     onError={(e) => { e.target.src = FALLBACK_IMAGE; }} />
                   <div className="p-5 space-y-4">
                     {course.pricing?.price > 0 ? (
